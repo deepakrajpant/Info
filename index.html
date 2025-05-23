@@ -1,340 +1,181 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Deepak Raj Pant - Professional Profile</title>
-  <link href="https://fonts.googleapis.com/css?family=Poppins:400,600,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <title>Hello, World!</title>
   <style>
-    :root {
-      --primary: #667eea;
-      --secondary: #764ba2;
-      --accent: #ff6b6b;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
     body {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-      background-size: 400% 400%;
-      color: #333;
-      line-height: 1.6;
-      animation: gradientBG 15s ease infinite;
-    }
-
-    @keyframes gradientBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
-    header {
-      background: rgba(102, 126, 234, 0.9);
-      backdrop-filter: blur(10px);
-      color: #fff;
-      padding: 2rem 0;
-      text-align: center;
-      animation: slideDown 1s ease-out;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    }
-
-    header h1 {
-      margin-bottom: 1rem;
-      font-size: 3rem;
-      letter-spacing: 2px;
-      background: linear-gradient(45deg, #fff, #ffeb3b);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: textGlow 2s ease-in-out infinite alternate;
-    }
-
-    nav {
-      display: flex;
-      justify-content: center;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-    }
-
-    .nav-btn {
-      color: #fff;
-      text-decoration: none;
-      padding: 0.8rem 1.5rem;
-      border-radius: 30px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(5px);
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .nav-btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: 0.5s;
-    }
-
-    .nav-btn:hover {
-      transform: translateY(-3px) scale(1.05);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    .nav-btn:hover::before {
-      left: 100%;
-    }
-
-    .container {
-      width: 90%;
-      max-width: 1200px;
-      margin: 2rem auto;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 2rem;
-      border-radius: 20px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      animation: fadeInUp 1s ease-out;
-    }
-
-    section {
-      margin-bottom: 3rem;
-      padding: 2rem;
-      border-radius: 15px;
-      background: rgba(255, 255, 255, 0.95);
-      transition: transform 0.3s ease;
-    }
-
-    section:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-    }
-
-    h2 {
-      font-size: 2rem;
-      color: var(--secondary);
-      margin-bottom: 1.5rem;
-      position: relative;
-    }
-
-    h2::after {
-      content: '';
-      position: absolute;
-      bottom: -5px;
-      left: 0;
-      width: 50px;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--secondary));
-      border-radius: 2px;
-    }
-
-    .skill-card {
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-      padding: 1.5rem;
-      border-radius: 10px;
-      margin: 1rem 0;
-      transition: all 0.3s ease;
-    }
-
-    .skill-card:hover {
-      transform: scale(1.02);
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
-    }
-
-    .project-highlight {
-      border-left: 4px solid var(--primary);
-      padding-left: 1rem;
-      margin: 1.5rem 0;
-      transition: all 0.3s ease;
-    }
-
-    .project-highlight:hover {
-      transform: translateX(10px);
-      background: rgba(102, 126, 234, 0.05);
-    }
-
-    .contact-info {
-      display: flex;
-      justify-content: center;
-      gap: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .contact-btn {
+      margin: 0;
+      height: 100vh;
       display: flex;
       align-items: center;
-      gap: 0.8rem;
-      padding: 1rem 2rem;
-      border-radius: 50px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: white;
-      text-decoration: none;
-      transition: all 0.3s ease;
-    }
-
-    .contact-btn i {
-      font-size: 1.2rem;
-    }
-
-    .contact-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-    }
-
-    footer {
-      background: rgba(102, 126, 234, 0.9);
-      backdrop-filter: blur(10px);
-      color: #fff;
-      text-align: center;
-      padding: 1.5rem 0;
-      border-top: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    @keyframes textGlow {
-      from { text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
-      to { text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 255, 255, 0.6); }
-    }
-
-    @keyframes slideDown {
-      from { transform: translateY(-100%); }
-      to { transform: translateY(0); }
-    }
-
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(40px); }
-      to { opacity: 1; transform: translateY(0); }
+      justify-content: center;
+      background-color: #000; /* Optional: dark background for better contrast */
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Deepak Raj Pant</h1>
-    <nav>
-      <a href="#about" class="nav-btn"><i class="fas fa-user"></i> About</a>
-      <a href="#education" class="nav-btn"><i class="fas fa-graduation-cap"></i> Education</a>
-      <a href="#certifications" class="nav-btn"><i class="fas fa-certificate"></i> Certifications</a>
-      <a href="#skills" class="nav-btn"><i class="fas fa-code"></i> Skills</a>
-      <a href="#experience" class="nav-btn"><i class="fas fa-briefcase"></i> Experience</a>
-      <a href="#projects" class="nav-btn"><i class="fas fa-project-diagram"></i> Projects</a>
-      <a href="#contact" class="nav-btn"><i class="fas fa-envelope"></i> Contact</a>
-    </nav>
-  </header>
 
-  <div class="container">
-    <!-- About Section -->
-    <section id="about">
-      <h2>About Me</h2>
-      <p>
-        Motivated and innovative Electrical and Electronics Engineering student with a strong foundation in electrical systems, circuit design, and automation. Eager to apply my technical expertise and creative ideas to solve complex challenges and contribute to the advancement of technology in the industry.
-      </p>
-    </section>
+<svg width="950" height="900" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <g id="Layer_1">
+    <title>Layer 1</title>
 
-    <!-- Education Section -->
-    <section id="education">
-      <h2>Education</h2>
-      <div class="skill-card">
-        <h3>Bachelor of Electrical and Electronics Engineering</h3>
-        <p><strong>Institution:</strong> Lumbini Engineering College (LEC), Butwal</p>
-        <p><strong>Status:</strong> Final Year Student | 2025</p>
-      </div>
-      <div class="skill-card">
-        <h3>+2 in Science</h3>
-        <p><strong>Institution:</strong> Aishwarya Vidya Niketan (AVN), Dhangadhi</p>
-        <p><strong>Graduated:</strong> 2021</p>
-      </div>
-      <div class="skill-card">
-        <h3>SEE</h3>
-        <p><strong>Institution:</strong> Rastriya Secondary School</p>
-        <p><strong>Completed:</strong> 2074</p>
-      </div>
-    </section>
+    <svg width="950" height="900" xmlns="http://www.w3.org/2000/svg" version="1.1">
+  <g id="Layer_1">
+    <title>Substation Diagram</title>
 
-    <!-- Certifications Section -->
-    <section id="certifications">
-      <h2>Certifications</h2>
-      <div class="skill-card">
-        <h3>Level 2 Building Electrician</h3>
-        <p>National Skill Testing Board (NSTB)</p>
-      </div>
-    </section>
+    <!--132kv Horizontal Busbars -->
+    <polyline id="busbar_top" points="50,300 100,300 100,325 100,300 150,300 150,325 150,300 300,300 300,325 300,300 450,300 450,450 450,300 650,300 650,325 650,300 800,300 800,325 800,300 850,300 850,325 850,300 900,300" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="busbar_bottom" points="50,400 100,400 100,375 100,400 150,400 150,375 150,400 300,400 300,375 300,400 500,400 500,450 500,400 650,400 650,375 650,400 800,400 800,375 800,400 850,400 850,375 850,400 900,400" fill="none" stroke="#f71111" stroke-width="4"/>
 
-    <!-- Skills Section -->
-    <section id="skills">
-      <h2>Key Skills</h2>
-      <div class="skill-card">
-        <h3>Electrical Engineering</h3>
-        <ul>
-          <li>Circuit Design and Development</li>
-          <li>House, Building, and Industrial Wiring</li>
-          <li>Microcontroller Programming (Arduino, PIC, etc.)</li>
-          <li>Sensors and Modules Integration</li>
-          <li>Wireless Control Systems</li>
-          <li>Lighting and Decoration Design</li>
-          <li>Electrical Troubleshooting</li>
-          <li>Knowledge of Electronic Components</li>
-        </ul>
-      </div>
-      <div class="skill-card">
-        <h3>Software &amp; App Development</h3>
-        <ul>
-          <li>Programming: C, C++, HTML, Java, Python</li>
-          <li>Innovative and Creative Solutions</li>
-        </ul>
-      </div>
-    </section>
+    <!-- incomer 132kv and 132 to 33kv tranaformer -->
+    <polyline id="isolator_100" points="100,335 100,365 100,350 120,350 120,250" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="isolator_150" points="150,335 150,365 150,350 170,350 170,250" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="isolator_300" points="300,335 300,365 300,350 320,350 320,450" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="isolator_650" points="650,335 650,365 650,350 630,350 630,450" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="isolator_800" points="800,335 800,365 800,350 780,350 780,250" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="isolator_850" points="850,335 850,365 850,350 830,350 830,250" fill="none" stroke="#f71111" stroke-width="4"/>
 
-    <!-- Professional Experience Section -->
-    <section id="experience">
-      <h2>Professional Experience</h2>
-      <div class="skill-card">
-        <ul>
-          <li>Conducted house and industrial wiring projects ensuring safety and efficiency.</li>
-          <li>Designed and implemented small-scale automation systems for homes and businesses.</li>
-          <li>Diagnosed and resolved electrical faults with a focus on customer satisfaction.</li>
-          <li>Freelance electrician with expertise in home automation, energy-efficient lighting, and smart sensors.</li>
-        </ul>
-      </div>
-    </section>
+    <!-- isolator (top row) -->
+    <line id="isot1" stroke="#00ff00" stroke-width="10" y2="340" x2="100" y1="320" x1="100"/>
+    <line id="breaker_top_150" stroke="#00ff00" stroke-width="10" y2="340" x2="150" y1="320" x1="150"/>
+    <line id="breaker_top_300" stroke="#00ff00" stroke-width="10" y2="340" x2="300" y1="320" x1="300"/>
+    <line id="breaker_top_650" stroke="#00ff00" stroke-width="10" y2="340" x2="650" y1="320" x1="650"/>
+    <line id="breaker_top_800" stroke="#00ff00" stroke-width="10" y2="340" x2="800" y1="320" x1="800"/>
+    <line id="breaker_top_850" stroke="#00ff00" stroke-width="10" y2="340" x2="850" y1="320" x1="850"/>
 
-    <!-- Projects Section -->
-    <section id="projects">
-      <h2>Projects</h2>
-      <div class="project-highlight">
-        <h3>Home Automation System <i class="fas fa-home"></i></h3>
-        <p>Developed a wireless control system for lighting and appliances using microcontrollers.</p>
-      </div>
-      <div class="project-highlight">
-        <h3>Energy-Efficient Lighting <i class="fas fa-lightbulb"></i></h3>
-        <p>Designed an innovative lighting setup that reduced energy consumption by 20%.</p>
-      </div>
-      <div class="project-highlight">
-        <h3>Smart Sensor Integration <i class="fas fa-robot"></i></h3>
-        <p>Integrated various sensors to automate industrial processes, enhancing safety and productivity.</p>
-      </div>
-    </section>
+    <!-- isolator (bottom row) -->
+    <line id="isob1" stroke="#00ff00" stroke-width="10" y2="380" x2="100" y1="360" x1="100"/>
+    <line id="breaker_bottom_150" stroke="#00ff00" stroke-width="10" y2="380" x2="150" y1="360" x1="150"/>
+    <line id="breaker_bottom_300" stroke="#00ff00" stroke-width="10" y2="380" x2="300" y1="360" x1="300"/>
+    <line id="breaker_bottom_650" stroke="#00ff00" stroke-width="10" y2="380" x2="650" y1="360" x1="650"/>
+    <line id="breaker_bottom_800" stroke="#00ff00" stroke-width="10" y2="380" x2="800" y1="360" x1="800"/>
+    <line id="breaker_bottom_850" stroke="#00ff00" stroke-width="10" y2="380" x2="850" y1="360" x1="850"/>
 
-    <!-- Contact Section -->
-    <section id="contact">
-      <h2>Let's Connect</h2>
-      <div class="contact-info">
-        <a href="tel:9866157755" class="contact-btn"><i class="fas fa-phone"></i> Call Now</a>
-        <a href="mailto:deepakrajpant978@gmail.com" class="contact-btn"><i class="fas fa-envelope"></i> Send Email</a>
-        <a href="http://drpant.com.np" target="_blank" class="contact-btn"><i class="fas fa-globe"></i> Visit Website</a>
-      </div>
-    </section>
-  </div>
+    <!-- bus couplers -->
+    <polyline id="midlink_450" points="450,460 450,500 470,500" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="midlink_500" points="500,460 500,500 480,500" fill="none" stroke="#f71111" stroke-width="4"/>
+    
+    <!-- 132kv/33kv transformer   -->
+    <polyline id="vertical_conn_320" points="320,460 320,550" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="vertical_conn_630" points="630,460 630,550" fill="none" stroke="#f71111" stroke-width="4"/>
 
-  <footer>
-    <p>&copy; 2025 Deepak Raj Pant. All Rights Reserved.</p>
-  </footer>
+    <!-- 33kv Busbar -->
+    <polyline id="busbar_lower_left" points="50,600 150,600 150,640 150,600 250,600 250,640 250,600 320,600 320,560 320,600 400,600 400,640 400,600 470,600" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="busbar_lower_right" points="480,600 550,600 550,640 550,600 630,600 630,560 630,600 750,600 750,640 750,600 850,600 850,640 850,600 900,600" fill="none" stroke="#f71111" stroke-width="4"/>
+
+
+<polyline points="150,650 150,690" fill="none" stroke-width="4" id="vline_150_1" stroke="#f71111"/>
+<polyline points="150,700 150,740" fill="none" stroke-width="4" id="vline_150_2" stroke="#f71111"/>
+<polyline points="150,750 150,800 145,800 150,805 155,800 150,800" fill="none" stroke-width="4" id="vline_150_3" stroke="#f71111"/>
+
+
+<polyline points="250,650 250,690" fill="none" stroke-width="4" id="vline_250_1" stroke="#f71111"/>
+<polyline points="250,700 250,740" fill="none" stroke-width="4" id="vline_250_2" stroke="#f71111"/>
+<polyline points="250,750 250,800 245,800 250,805 255,800 250,800" fill="none" stroke-width="4" id="vline_250_3" stroke="#f71111"/>
+
+
+<polyline points="400,650 400,690" fill="none" stroke-width="4" id="vline_400_1" stroke="#f71111"/>
+<polyline points="400,700 400,740" fill="none" stroke-width="4" id="vline_400_2" stroke="#f71111"/>
+<polyline points="400,750 400,800 395,800 400,805 405,800 400,800" fill="none" stroke-width="4" id="vline_400_3" stroke="#f71111"/>
+
+
+<polyline points="550,650 550,690" fill="none" stroke-width="4" id="vline_550_1" stroke="#f71111"/>
+<polyline points="550,700 550,740" fill="none" stroke-width="4" id="vline_550_2" stroke="#f71111"/>
+<polyline points="550,750 550,800 545,800 550,805 555,800 550,800" fill="none" stroke-width="4" id="vline_550_3" stroke="#f71111"/>
+
+
+<polyline points="750,650 750,690" fill="none" stroke-width="4" id="vline_750_1" stroke="#f71111"/>
+<polyline points="750,700 750,740" fill="none" stroke-width="4" id="vline_750_2" stroke="#f71111"/>
+<polyline points="750,750 750,800 745,800 750,805 755,800 750,800" fill="none" stroke-width="4" id="vline_750_3" stroke="#f71111"/>
+
+
+<polyline points="850,650 850,690" fill="none" stroke-width="4" id="vline_850_1" stroke="#f71111"/>
+<polyline points="850,700 850,740" fill="none" stroke-width="4" id="vline_850_2" stroke="#f71111"/>
+<polyline points="850,750 850,800 845,800 850,805 855,800 850,800" fill="none" stroke-width="4" id="vline_850_3" stroke="#f71111"/>
+
+
+
+<polyline points="150,635 150,655" fill="none" stroke-width="10" id="svg_1501" stroke="#00ff00"/>
+<polyline points="150,735 150,755" fill="none" stroke-width="10" id="svg_1502" stroke="#00ff00"/>
+
+
+<polyline points="250,635 250,655" fill="none" stroke-width="10" id="svg_2501" stroke="#00ff00"/>
+<polyline points="250,735 250,755" fill="none" stroke-width="10" id="svg_2502" stroke="#00ff00"/>
+
+
+<polyline points="400,635 400,655" fill="none" stroke-width="10" id="svg_4001" stroke="#00ff00"/>
+<polyline points="400,735 400,755" fill="none" stroke-width="10" id="svg_4002" stroke="#00ff00"/>
+
+
+<polyline points="550,635 550,655" fill="none" stroke-width="10" id="svg_5501" stroke="#00ff00"/>
+<polyline points="550,735 550,755" fill="none" stroke-width="10" id="svg_5502" stroke="#00ff00"/>
+
+
+<polyline points="750,635 750,655" fill="none" stroke-width="10" id="svg_7501" stroke="#00ff00"/>
+<polyline points="750,735 750,755" fill="none" stroke-width="10" id="svg_7502" stroke="#00ff00"/>
+
+
+<polyline points="850,635 850,655" fill="none" stroke-width="10" id="svg_8501" stroke="#00ff00"/>
+<polyline points="850,735 850,755" fill="none" stroke-width="10" id="svg_8502" stroke="#00ff00"/>
+
+
+
+
+<polyline points="450,445 450,465" fill="none" stroke-width="10" id="svg_1501" stroke="#00ff00"/>
+<polyline points="500,445 500,465" fill="none" stroke-width="10" id="svg_1501" stroke="#00ff00"/>
+
+
+
+
+
+
+
+
+
+<polyline points="150,685 150,705" fill="none" stroke-width="15" id="svg_150" stroke="#00ff00"/>
+
+<polyline points="250,685 250,705" fill="none" stroke-width="15" id="svg_250" stroke="#00ff00"/>
+
+<polyline points="400,685 400,705" fill="none" stroke-width="15" id="svg_400" stroke="#00ff00"/>
+
+<polyline points="550,685 550,705" fill="none" stroke-width="15" id="svg_550" stroke="#00ff00"/>
+
+<polyline points="750,685 750,705" fill="none" stroke-width="15" id="svg_750" stroke="#00ff00"/>
+
+<polyline points="850,685 850,705" fill="none" stroke-width="15" id="svg_850" stroke="#00ff00"/>
+
+
+
+
+
+
+
+<polyline points="320,445 320,465" fill="none" stroke-width="15" id="svg_400" stroke="#00ff00"/>
+
+<polyline points="630,445 630,465" fill="none" stroke-width="15" id="svg_550" stroke="#00ff00"/>
+
+
+<polyline points="320,545 320,565" fill="none" stroke-width="15" id="svg_750" stroke="#00ff00"/>
+
+<polyline points="630,545 630,565" fill="none" stroke-width="15" id="svg_850" stroke="#00ff00"/>
+
+
+
+
+<polyline points="465,500 485,500" fill="none" stroke-width="15" id="svg_850" stroke="#00ff00"/>
+
+
+
+<polyline points="465,600 485,600" fill="none" stroke-width="15" id="svg_850" stroke="#00ff00"/>
+
+
+
+
+
+
+  </g>
+</svg>
+
+
 </body>
 </html>
