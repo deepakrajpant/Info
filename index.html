@@ -5,7 +5,7 @@
   <style>
     body {
       margin: 0;
-      height: 100vh;
+      height: 150vh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -15,166 +15,613 @@
 </head>
 <body>
 
-<svg width="950" height="900" xmlns="http://www.w3.org/2000/svg" version="1.1">
-  <g id="Layer_1">
-    <title>Layer 1</title>
-
     <svg width="950" height="900" xmlns="http://www.w3.org/2000/svg" version="1.1">
-  <g id="Layer_1">
+    <g id="Layer_1">
     <title>Substation Diagram</title>
 
     <!--132kv Horizontal Busbars -->
-    <polyline id="busbar_top" points="50,300 100,300 100,325 100,300 150,300 150,325 150,300 300,300 300,325 300,300 450,300 450,450 450,300 650,300 650,325 650,300 800,300 800,325 800,300 850,300 850,325 850,300 900,300" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="busbar_bottom" points="50,400 100,400 100,375 100,400 150,400 150,375 150,400 300,400 300,375 300,400 500,400 500,450 500,400 650,400 650,375 650,400 800,400 800,375 800,400 850,400 850,375 850,400 900,400" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="bus1" points="50,300 100,300 100,325 100,300 150,300 150,325 150,300 300,300 300,325 300,300 450,300 450,450 450,300 650,300 650,325 650,300 800,300 800,325 800,300 850,300 850,325 850,300 900,300" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="bus2" points="50,400 100,400 100,375 100,400 150,400 150,375 150,400 300,400 300,375 300,400 500,400 500,450 500,400 650,400 650,375 650,400 800,400 800,375 800,400 850,400 850,375 850,400 900,400" fill="none" stroke="#f71111" stroke-width="4"/>
 
-    <!-- incomer 132kv and 132 to 33kv tranaformer -->
-    <polyline id="isolator_100" points="100,335 100,365 100,350 120,350 120,250" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="isolator_150" points="150,335 150,365 150,350 170,350 170,250" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="isolator_300" points="300,335 300,365 300,350 320,350 320,450" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="isolator_650" points="650,335 650,365 650,350 630,350 630,450" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="isolator_800" points="800,335 800,365 800,350 780,350 780,250" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="isolator_850" points="850,335 850,365 850,350 830,350 830,250" fill="none" stroke="#f71111" stroke-width="4"/>
+
+
+
+    <!-- incomer 132kv line first top line -->
+    <polyline points="120,150 120,190" fill="none" stroke-width="4" id="l1" stroke="#f71111"/>
+    <polyline points="170,150 170,190" fill="none" stroke-width="4" id="l2" stroke="#f71111"/>
+    <polyline points="780,150 780,190" fill="none" stroke-width="4" id="l3" stroke="#f71111"/>
+    <polyline points="830,150 830,190" fill="none" stroke-width="4" id="l4" stroke="#f71111"/>
+
+
+
+    <!-- incomer 132kv line second line-->
+    <polyline points="120,200 120,240" fill="none" stroke-width="4" id="l5" stroke="#f71111"/>
+    <polyline points="170,200 170,240" fill="none" stroke-width="4" id="l6" stroke="#f71111"/>
+    <polyline points="780,200 780,240" fill="none" stroke-width="4" id="l7" stroke="#f71111"/>
+    <polyline points="830,200 830,240" fill="none" stroke-width="4" id="l8" stroke="#f71111"/>
+
+
+
+    <!-- incomer 132kv line isolator -->
+    <polyline points="120,185 120,205" fill="none" stroke-width="10" id="i1" stroke="#00ff00"/>
+    <polyline points="170,185 170,205" fill="none" stroke-width="10" id="i2" stroke="#00ff00"/>
+    <polyline points="780,185 780,205" fill="none" stroke-width="10" id="i3" stroke="#00ff00"/>
+    <polyline points="830,185 830,205" fill="none" stroke-width="10" id="i4" stroke="#00ff00"/>
+
+
+
+
+
+
+    <!-- incomer 132kv and 132 to 33kv tranaformer angle wala line  -->
+    <polyline id="l9" points="100,335 100,365 100,350 120,350 120,250" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="l10" points="150,335 150,365 150,350 170,350 170,250" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="l11" points="300,335 300,365 300,350 320,350 320,450" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="l12" points="650,335 650,365 650,350 630,350 630,450" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="l13" points="800,335 800,365 800,350 780,350 780,250" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="l14" points="850,335 850,365 850,350 830,350 830,250" fill="none" stroke="#f71111" stroke-width="4"/>
+
+
+
+
+    <!-- incomer 132kv line breaker-->
+    <polyline points="120,235 120,255" fill="none" stroke-width="15" id="b1" stroke="#00ff00"/>
+    <polyline points="170,235 170,255" fill="none" stroke-width="15" id="b2" stroke="#00ff00"/>
+    <polyline points="780,235 780,255" fill="none" stroke-width="15" id="b3" stroke="#00ff00"/>
+    <polyline points="830,235 830,255" fill="none" stroke-width="15" id="b4" stroke="#00ff00"/>
+
+
 
     <!-- isolator (top row) -->
-    <line id="isot1" stroke="#00ff00" stroke-width="10" y2="340" x2="100" y1="320" x1="100"/>
-    <line id="breaker_top_150" stroke="#00ff00" stroke-width="10" y2="340" x2="150" y1="320" x1="150"/>
-    <line id="breaker_top_300" stroke="#00ff00" stroke-width="10" y2="340" x2="300" y1="320" x1="300"/>
-    <line id="breaker_top_650" stroke="#00ff00" stroke-width="10" y2="340" x2="650" y1="320" x1="650"/>
-    <line id="breaker_top_800" stroke="#00ff00" stroke-width="10" y2="340" x2="800" y1="320" x1="800"/>
-    <line id="breaker_top_850" stroke="#00ff00" stroke-width="10" y2="340" x2="850" y1="320" x1="850"/>
+    <line id="i5" stroke="#00ff00" stroke-width="10" y2="340" x2="100" y1="320" x1="100"/>
+    <line id="i6" stroke="#00ff00" stroke-width="10" y2="340" x2="150" y1="320" x1="150"/>
+    <line id="i7" stroke="#00ff00" stroke-width="10" y2="340" x2="300" y1="320" x1="300"/>
+    <line id="i8" stroke="#00ff00" stroke-width="10" y2="340" x2="650" y1="320" x1="650"/>
+    <line id="i9" stroke="#00ff00" stroke-width="10" y2="340" x2="800" y1="320" x1="800"/>
+    <line id="i10" stroke="#00ff00" stroke-width="10" y2="340" x2="850" y1="320" x1="850"/>
 
     <!-- isolator (bottom row) -->
-    <line id="isob1" stroke="#00ff00" stroke-width="10" y2="380" x2="100" y1="360" x1="100"/>
-    <line id="breaker_bottom_150" stroke="#00ff00" stroke-width="10" y2="380" x2="150" y1="360" x1="150"/>
-    <line id="breaker_bottom_300" stroke="#00ff00" stroke-width="10" y2="380" x2="300" y1="360" x1="300"/>
-    <line id="breaker_bottom_650" stroke="#00ff00" stroke-width="10" y2="380" x2="650" y1="360" x1="650"/>
-    <line id="breaker_bottom_800" stroke="#00ff00" stroke-width="10" y2="380" x2="800" y1="360" x1="800"/>
-    <line id="breaker_bottom_850" stroke="#00ff00" stroke-width="10" y2="380" x2="850" y1="360" x1="850"/>
+    <line id="i11" stroke="#00ff00" stroke-width="10" y2="380" x2="100" y1="360" x1="100"/>
+    <line id="i12" stroke="#00ff00" stroke-width="10" y2="380" x2="150" y1="360" x1="150"/>
+    <line id="i13" stroke="#00ff00" stroke-width="10" y2="380" x2="300" y1="360" x1="300"/>
+    <line id="i14" stroke="#00ff00" stroke-width="10" y2="380" x2="650" y1="360" x1="650"/>
+    <line id="i15" stroke="#00ff00" stroke-width="10" y2="380" x2="800" y1="360" x1="800"/>
+    <line id="i16" stroke="#00ff00" stroke-width="10" y2="380" x2="850" y1="360" x1="850"/>
 
-    <!-- bus couplers -->
-    <polyline id="midlink_450" points="450,460 450,500 470,500" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="midlink_500" points="500,460 500,500 480,500" fill="none" stroke="#f71111" stroke-width="4"/>
+
+
+    <!-- bus couplers line -->
+    <polyline id="l15" points="450,460 450,500 470,500" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="l16" points="500,460 500,500 480,500" fill="none" stroke="#f71111" stroke-width="4"/>
+
+
+    <!-- bus coupler isolator-->
+    <polyline points="450,445 450,465" fill="none" stroke-width="10" id="i17" stroke="#00ff00"/>
+    <polyline points="500,445 500,465" fill="none" stroke-width="10" id="i18" stroke="#00ff00"/>
+
+
+    <!-- bus coupler breaker-->
+    <polyline points="465,500 485,500" fill="none" stroke-width="15" id="b5" stroke="#00ff00"/>
+
+
+
+
     
-    <!-- 132kv/33kv transformer   -->
-    <polyline id="vertical_conn_320" points="320,460 320,550" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="vertical_conn_630" points="630,460 630,550" fill="none" stroke="#f71111" stroke-width="4"/>
+    <!-- 132kv/33kv transformer line   -->
+    <polyline id="l17" points="320,460 320,550" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="l18" points="630,460 630,550" fill="none" stroke="#f71111" stroke-width="4"/>
+
+
+
 
     <!-- 33kv Busbar -->
-    <polyline id="busbar_lower_left" points="50,600 150,600 150,640 150,600 250,600 250,640 250,600 320,600 320,560 320,600 400,600 400,640 400,600 470,600" fill="none" stroke="#f71111" stroke-width="4"/>
-    <polyline id="busbar_lower_right" points="480,600 550,600 550,640 550,600 630,600 630,560 630,600 750,600 750,640 750,600 850,600 850,640 850,600 900,600" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="bus3" points="50,600 150,600 150,640 150,600 250,600 250,640 250,600 320,600 320,560 320,600 400,600 400,640 400,600 470,600" fill="none" stroke="#f71111" stroke-width="4"/>
+    <polyline id="bus4" points="480,600 550,600 550,640 550,600 630,600 630,560 630,600 750,600 750,640 750,600 850,600 850,640 850,600 900,600" fill="none" stroke="#f71111" stroke-width="4"/>
 
 
-<polyline points="150,650 150,690" fill="none" stroke-width="4" id="vline_150_1" stroke="#f71111"/>
-<polyline points="150,700 150,740" fill="none" stroke-width="4" id="vline_150_2" stroke="#f71111"/>
-<polyline points="150,750 150,800 145,800 150,805 155,800 150,800" fill="none" stroke-width="4" id="vline_150_3" stroke="#f71111"/>
 
+    <!-- 33kv Bus coupler breaker -->
+    <polyline points="465,600 485,600" fill="none" stroke-width="15" id="b6" stroke="#00ff00"/>
 
-<polyline points="250,650 250,690" fill="none" stroke-width="4" id="vline_250_1" stroke="#f71111"/>
-<polyline points="250,700 250,740" fill="none" stroke-width="4" id="vline_250_2" stroke="#f71111"/>
-<polyline points="250,750 250,800 245,800 250,805 255,800 250,800" fill="none" stroke-width="4" id="vline_250_3" stroke="#f71111"/>
 
 
-<polyline points="400,650 400,690" fill="none" stroke-width="4" id="vline_400_1" stroke="#f71111"/>
-<polyline points="400,700 400,740" fill="none" stroke-width="4" id="vline_400_2" stroke="#f71111"/>
-<polyline points="400,750 400,800 395,800 400,805 405,800 400,800" fill="none" stroke-width="4" id="vline_400_3" stroke="#f71111"/>
+    <!-- 132kv/33kv transformer breaker  -->
+    <polyline points="320,445 320,465" fill="none" stroke-width="15" id="b7" stroke="#00ff00"/>
+    <polyline points="630,445 630,465" fill="none" stroke-width="15" id="b8" stroke="#00ff00"/>
+    <polyline points="320,545 320,565" fill="none" stroke-width="15" id="b9" stroke="#00ff00"/>
+    <polyline points="630,545 630,565" fill="none" stroke-width="15" id="b10" stroke="#00ff00"/>
 
 
-<polyline points="550,650 550,690" fill="none" stroke-width="4" id="vline_550_1" stroke="#f71111"/>
-<polyline points="550,700 550,740" fill="none" stroke-width="4" id="vline_550_2" stroke="#f71111"/>
-<polyline points="550,750 550,800 545,800 550,805 555,800 550,800" fill="none" stroke-width="4" id="vline_550_3" stroke="#f71111"/>
 
 
-<polyline points="750,650 750,690" fill="none" stroke-width="4" id="vline_750_1" stroke="#f71111"/>
-<polyline points="750,700 750,740" fill="none" stroke-width="4" id="vline_750_2" stroke="#f71111"/>
-<polyline points="750,750 750,800 745,800 750,805 755,800 750,800" fill="none" stroke-width="4" id="vline_750_3" stroke="#f71111"/>
+    <!-- 33kv feeder1 -->
+    <polyline points="150,650 150,690" fill="none" stroke-width="4" id="l19" stroke="#f71111"/>
+    <polyline points="150,700 150,740" fill="none" stroke-width="4" id="l20" stroke="#f71111"/>
+    <polyline points="150,750 150,800 145,800 150,805 155,800 150,800" fill="none" stroke-width="4" id="l21" stroke="#f71111"/>
 
+    <!-- 33kv feeder2 -->
+    <polyline points="250,650 250,690" fill="none" stroke-width="4" id="l22" stroke="#f71111"/>
+    <polyline points="250,700 250,740" fill="none" stroke-width="4" id="l23" stroke="#f71111"/>
+    <polyline points="250,750 250,800 245,800 250,805 255,800 250,800" fill="none" stroke-width="4" id="l24" stroke="#f71111"/>
 
-<polyline points="850,650 850,690" fill="none" stroke-width="4" id="vline_850_1" stroke="#f71111"/>
-<polyline points="850,700 850,740" fill="none" stroke-width="4" id="vline_850_2" stroke="#f71111"/>
-<polyline points="850,750 850,800 845,800 850,805 855,800 850,800" fill="none" stroke-width="4" id="vline_850_3" stroke="#f71111"/>
+    <!-- 33kv feeder3 -->
+    <polyline points="400,650 400,690" fill="none" stroke-width="4" id="l25" stroke="#f71111"/>
+    <polyline points="400,700 400,740" fill="none" stroke-width="4" id="l26" stroke="#f71111"/>
+    <polyline points="400,750 400,800 395,800 400,805 405,800 400,800" fill="none" stroke-width="4" id="l27" stroke="#f71111"/>
 
+    <!-- 33kv feeder4 -->
+    <polyline points="550,650 550,690" fill="none" stroke-width="4" id="l28" stroke="#f71111"/>
+    <polyline points="550,700 550,740" fill="none" stroke-width="4" id="l29" stroke="#f71111"/>
+    <polyline points="550,750 550,800 545,800 550,805 555,800 550,800" fill="none" stroke-width="4" id="l30" stroke="#f71111"/>
 
+    <!-- 33kv feeder5 -->
+    <polyline points="750,650 750,690" fill="none" stroke-width="4" id="l31" stroke="#f71111"/>
+    <polyline points="750,700 750,740" fill="none" stroke-width="4" id="l32" stroke="#f71111"/>
+    <polyline points="750,750 750,800 745,800 750,805 755,800 750,800" fill="none" stroke-width="4" id="l33" stroke="#f71111"/>
 
-<polyline points="150,635 150,655" fill="none" stroke-width="10" id="svg_1501" stroke="#00ff00"/>
-<polyline points="150,735 150,755" fill="none" stroke-width="10" id="svg_1502" stroke="#00ff00"/>
+    <!-- 33kv feeder6 -->
+    <polyline points="850,650 850,690" fill="none" stroke-width="4" id="l34" stroke="#f71111"/>
+    <polyline points="850,700 850,740" fill="none" stroke-width="4" id="l35" stroke="#f71111"/>
+    <polyline points="850,750 850,800 845,800 850,805 855,800 850,800" fill="none" stroke-width="4" id="l36" stroke="#f71111"/>
 
 
-<polyline points="250,635 250,655" fill="none" stroke-width="10" id="svg_2501" stroke="#00ff00"/>
-<polyline points="250,735 250,755" fill="none" stroke-width="10" id="svg_2502" stroke="#00ff00"/>
+    <!-- 33kv feeder1 isolator-->
+    <polyline points="150,635 150,655" fill="none" stroke-width="10" id="i19" stroke="#00ff00"/>
+    <polyline points="150,735 150,755" fill="none" stroke-width="10" id="i20" stroke="#00ff00"/>
 
+    <!-- 33kv feeder2 isolator-->
+    <polyline points="250,635 250,655" fill="none" stroke-width="10" id="i21" stroke="#00ff00"/>
+    <polyline points="250,735 250,755" fill="none" stroke-width="10" id="i22" stroke="#00ff00"/>
 
-<polyline points="400,635 400,655" fill="none" stroke-width="10" id="svg_4001" stroke="#00ff00"/>
-<polyline points="400,735 400,755" fill="none" stroke-width="10" id="svg_4002" stroke="#00ff00"/>
+    <!-- 33kv feeder3 isolator-->
+    <polyline points="400,635 400,655" fill="none" stroke-width="10" id="i23" stroke="#00ff00"/>
+    <polyline points="400,735 400,755" fill="none" stroke-width="10" id="i24" stroke="#00ff00"/>
 
+    <!-- 33kv feeder4 isolator-->
+    <polyline points="550,635 550,655" fill="none" stroke-width="10" id="i25" stroke="#00ff00"/>
+    <polyline points="550,735 550,755" fill="none" stroke-width="10" id="i26" stroke="#00ff00"/>
 
-<polyline points="550,635 550,655" fill="none" stroke-width="10" id="svg_5501" stroke="#00ff00"/>
-<polyline points="550,735 550,755" fill="none" stroke-width="10" id="svg_5502" stroke="#00ff00"/>
+    <!-- 33kv feeder5 isolator-->
+    <polyline points="750,635 750,655" fill="none" stroke-width="10" id="i27" stroke="#00ff00"/>
+    <polyline points="750,735 750,755" fill="none" stroke-width="10" id="i28" stroke="#00ff00"/>
 
+    <!-- 33kv feeder6 isolator-->
+    <polyline points="850,635 850,655" fill="none" stroke-width="10" id="i29" stroke="#00ff00"/>
+    <polyline points="850,735 850,755" fill="none" stroke-width="10" id="i30" stroke="#00ff00"/>
 
-<polyline points="750,635 750,655" fill="none" stroke-width="10" id="svg_7501" stroke="#00ff00"/>
-<polyline points="750,735 750,755" fill="none" stroke-width="10" id="svg_7502" stroke="#00ff00"/>
 
 
-<polyline points="850,635 850,655" fill="none" stroke-width="10" id="svg_8501" stroke="#00ff00"/>
-<polyline points="850,735 850,755" fill="none" stroke-width="10" id="svg_8502" stroke="#00ff00"/>
 
+    <!-- 33kv feeder breakers-->
+    <polyline points="150,685 150,705" fill="none" stroke-width="15" id="b11" stroke="#00ff00"/>
+    <polyline points="250,685 250,705" fill="none" stroke-width="15" id="b12" stroke="#00ff00"/>
+    <polyline points="400,685 400,705" fill="none" stroke-width="15" id="b13" stroke="#00ff00"/>
+    <polyline points="550,685 550,705" fill="none" stroke-width="15" id="b14" stroke="#00ff00"/>
+    <polyline points="750,685 750,705" fill="none" stroke-width="15" id="b15" stroke="#00ff00"/>
+    <polyline points="850,685 850,705" fill="none" stroke-width="15" id="b16" stroke="#00ff00"/>
 
 
-
-<polyline points="450,445 450,465" fill="none" stroke-width="10" id="svg_1501" stroke="#00ff00"/>
-<polyline points="500,445 500,465" fill="none" stroke-width="10" id="svg_1501" stroke="#00ff00"/>
-
-
-
-
-
-
-
-
-
-<polyline points="150,685 150,705" fill="none" stroke-width="15" id="svg_150" stroke="#00ff00"/>
-
-<polyline points="250,685 250,705" fill="none" stroke-width="15" id="svg_250" stroke="#00ff00"/>
-
-<polyline points="400,685 400,705" fill="none" stroke-width="15" id="svg_400" stroke="#00ff00"/>
-
-<polyline points="550,685 550,705" fill="none" stroke-width="15" id="svg_550" stroke="#00ff00"/>
-
-<polyline points="750,685 750,705" fill="none" stroke-width="15" id="svg_750" stroke="#00ff00"/>
-
-<polyline points="850,685 850,705" fill="none" stroke-width="15" id="svg_850" stroke="#00ff00"/>
-
-
-
-
-
-
-
-<polyline points="320,445 320,465" fill="none" stroke-width="15" id="svg_400" stroke="#00ff00"/>
-
-<polyline points="630,445 630,465" fill="none" stroke-width="15" id="svg_550" stroke="#00ff00"/>
-
-
-<polyline points="320,545 320,565" fill="none" stroke-width="15" id="svg_750" stroke="#00ff00"/>
-
-<polyline points="630,545 630,565" fill="none" stroke-width="15" id="svg_850" stroke="#00ff00"/>
-
-
-
-
-<polyline points="465,500 485,500" fill="none" stroke-width="15" id="svg_850" stroke="#00ff00"/>
-
-
-
-<polyline points="465,600 485,600" fill="none" stroke-width="15" id="svg_850" stroke="#00ff00"/>
-
-
-
-
-
-
-  </g>
+  
+</g>
 </svg>
+
+
+
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+<script>
+  // Firebase config setup
+  const firebaseConfig = {
+    apiKey: "AIzaSyDlxCrKtgn8MPm-hEM6qAALlzuGTdawPKo",
+    authDomain: "systemonoff-e9210.firebaseapp.com",
+    databaseURL: "https://systemonoff-e9210-default-rtdb.firebaseio.com/",
+    projectId: "systemonoff-e9210",
+    storageBucket: "systemonoff-e9210.appspot.com"
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Function to set up each isolator
+  function setupIsolator(id) {
+    const ref = db.ref(id);
+
+    // Toggle isolator on click
+    document.getElementById(id).addEventListener('click', () => {
+      ref.once('value').then(snapshot => {
+        const current = snapshot.val();
+        ref.set(current === 1 ? 0 : 1);
+      });
+    });
+
+    // Update color on change
+    ref.on('value', (snapshot) => {
+      const value = snapshot.val();
+      const color = value === 1 ? 'yellow' : 'white';
+      document.getElementById(id).setAttribute('stroke', color);
+    });
+  }
+
+  // Loop from i1 to i30
+  for (let i = 1; i <= 30; i++) {
+    setupIsolator('i' + i);
+  }
+  
+   // Function to set up each breaker
+  function setupBreaker(id) {
+    const ref = db.ref(id);
+
+    // Toggle breaker on click
+    document.getElementById(id).addEventListener('click', () => {
+      ref.once('value').then(snapshot => {
+        const current = snapshot.val();
+        ref.set(current === 1 ? 0 : 1);
+      });
+    });
+
+    // Update color on change
+    ref.on('value', (snapshot) => {
+      const value = snapshot.val();
+      const color = value === 1 ? 'yellow' : 'white';
+      document.getElementById(id).setAttribute('stroke', color);
+    });
+  }
+
+  // Loop from b1 to b16
+  for (let i = 1; i <= 16; i++) {
+    setupBreaker('b' + i);
+  }
+  
+     //////////////////////////////////////////// line color 
+     
+  function setupLine(id) {
+    const ref = db.ref(id);
+
+    // Update color on change
+    ref.on('value', (snapshot) => {
+      const value = snapshot.val();
+      const color = value === 1 ? 'red' : 'green';
+      document.getElementById(id).setAttribute('stroke', color);
+    });
+  }
+
+  // Loop from b1 to b16
+  for (let i = 1; i <= 36; i++) {
+    setupLine('l' + i);
+  }
+  
+  
+ //////////////////////////////////////////// bus color 
+     
+  function setupBus(id) {
+    const ref = db.ref(id);
+
+    // Update color on busbar
+    ref.on('value', (snapshot) => {
+      const value = snapshot.val();
+      const color = value === 1 ? 'red' : 'green';
+      document.getElementById(id).setAttribute('stroke', color);
+    });
+  }
+
+  // Loop from b1 to b16
+  for (let i = 1; i <= 4; i++) {
+    setupBus('bus' + i);
+  }
+
+
+    // Listen for data changes
+    db.ref("/").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        applyLogic(data);
+      }
+    });
+
+   function applyLogic(data) {
+  const keys = [
+    "b1","b2","b3","b4","b5","b6","b7","b8","b9","b10","b11","b12","b13","b14","b15","b16",
+    "bus1","bus2","bus3","bus4",
+    "i1","i2","i3","i4","i5","i6","i7","i8","i9","i10","i11","i12","i13","i14","i15","i16","i17","i18","i19","i20","i21","i22","i23","i24","i25","i26","i27","i28","i29","i30",
+    "l1","l2","l3","l4","l5","l6","l7","l8","l9","l10","l11","l12","l13","l14","l15","l16","l17","l18","l19","l20","l21","l22","l23","l24","l25","l26","l27","l28","l29","l30","l31","l32","l33","l34","l35","l36"
+  ];
+
+  const parsed = {};
+  keys.forEach(k => {
+    parsed[k] = parseInt(data[k]) || 0;
+  });
+  
+   //for line 5
+  if ((parsed.l1 === 1 && parsed.i1 === 1) || (parsed.l9 === 1 && parsed.b1 === 1)) {
+    db.ref("l5").set(1);
+  } else {
+    db.ref("l5").set(0);
+  }
+  
+  // for line 6
+  if ((parsed.l2 === 1 && parsed.i2 === 1) || (parsed.l10 === 1 && parsed.b2 === 1)) {
+    db.ref("l6").set(1);
+  } else {
+    db.ref("l6").set(0);
+  }  
+     //for line 7
+  if ((parsed.l3 === 1 && parsed.i3 === 1) || (parsed.l13 === 1 && parsed.b3 === 1)) {
+    db.ref("l7").set(1);
+  } else {
+    db.ref("l7").set(0);
+  }
+  
+  // for line 8
+  if ((parsed.l4 === 1 && parsed.i4 === 1) || (parsed.l14 === 1 && parsed.b4 === 1)) {
+    db.ref("l8").set(1);
+  } else {
+    db.ref("l8").set(0);
+  }  
+  
+   // for line 9
+  if (((parsed.bus1 === 1 && parsed.i5 === 1) || (parsed.bus2 === 1 && parsed.i11 === 1) || (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1)) ) 
+  {
+    db.ref("l9").set(1);
+  } else {
+    db.ref("l9").set(0);
+  }  
+   
+   
+    // for line 10
+  if (((parsed.bus1 === 1 && parsed.i6 === 1) || (parsed.bus2 === 1 && parsed.i12 === 1) || (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1)) ) 
+  {
+    db.ref("l10").set(1);
+  } else {
+    db.ref("l10").set(0);
+  }  
+  
+  
+    // for line 13
+  if (((parsed.bus1 === 1 && parsed.i9 === 1) || (parsed.bus2 === 1 && parsed.i15 === 1) || (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1)) ) 
+  {
+    db.ref("l13").set(1);
+  } else {
+    db.ref("l13").set(0);
+  }  
+   
+   
+    // for line 114
+  if (((parsed.bus1 === 1 && parsed.i10 === 1) || (parsed.bus2 === 1 && parsed.i16 === 1) || (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1)) ) 
+  {
+    db.ref("l14").set(1);
+  } else {
+    db.ref("l14").set(0);
+  }  
+  
+
+  
+  // for bus1
+  if (( (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1 && parsed.i5 === 1) || (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1 && parsed.i6 === 1) || (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1 && parsed.i9 === 1) || (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1 && parsed.i10 === 1) || (parsed.bus2 === 1 && parsed.i18 === 1  && parsed.b5 === 1 && parsed.i17 === 1))) 
+  {
+    db.ref("bus1").set(1);
+  } else {
+    db.ref("bus1").set(0);
+  }  
+   
+  
+   
+  // for bus2
+  if (( (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1 && parsed.i11 === 1) || (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1 && parsed.i12 === 1) || (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1 && parsed.i15 === 1) || (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1 && parsed.i16 === 1) || (parsed.bus1 === 1 && parsed.i18 === 1  && parsed.b5 === 1 && parsed.i17 === 1))) 
+  {
+    db.ref("bus2").set(1);
+  } else {
+    db.ref("bus2").set(0);
+  }  
+    
+   
+    // for line 11
+  if (((parsed.bus1 === 1 && parsed.i7 === 1) || (parsed.bus2 === 1 && parsed.i13 === 1) || (parsed.bus3 === 1 && parsed.b7 === 1 && parsed.l17 === 1 && parsed.b9 === 1)) ) 
+  {
+    db.ref("l11").set(1);
+  } else {
+    db.ref("l11").set(0);
+  }  
+  
+  
+      // for line 12
+  if (((parsed.bus1 === 1 && parsed.i8 === 1) || (parsed.bus2 === 1 && parsed.i14 === 1) || (parsed.bus4 === 1 && parsed.b8 === 1 && parsed.l18 === 1 && parsed.b10 === 1)) ) 
+  {
+    db.ref("l12").set(1);
+  } else {
+    db.ref("l12").set(0);
+  }  
+  
+  // for bus coupler line line 15 and line 16 
+  
+  // for line 15
+  if ((parsed.bus1 == 1 && parsed.i17 == 1) || (parsed.bus2 == 1 && parsed.i18 == 1 && parsed.b5 == 1))
+    {
+    db.ref("l15").set(1);
+  } else {
+    db.ref("l15").set(0);
+  }  
+  
+    // for line 16
+  if ((parsed.bus2 == 1 && parsed.i18 == 1) || (parsed.bus1 == 1 && parsed.i17 == 1 && parsed.b5 == 1))
+    {
+    db.ref("l16").set(1);
+  } else {
+    db.ref("l16").set(0);
+  }  
+  
+  // for transformer line 17 and 18
+  //for t1 line 
+  if ((parsed.l11 == 1 && parsed.b7 == 1) || (parsed.bus3 == 1 && parsed.b9 == 1))
+    {
+    db.ref("l17").set(1);
+  } else {
+    db.ref("l17").set(0);
+  }  
+  
+  //for t2 line 
+  if ((parsed.l12 == 1 && parsed.b8 == 1) || (parsed.bus4 == 1 && parsed.b10 == 1))
+    {
+    db.ref("l18").set(1);
+  } else {
+    db.ref("l18").set(0);
+  }  
+  
+// For bus3
+if (
+  (
+    ((parsed.bus1 == 1 && parsed.i7 == 1) || (parsed.bus2 == 1 && parsed.i13 == 1)) &&
+    parsed.l11 == 1 && parsed.b7 == 1 && parsed.l17 == 1 && parsed.b9 == 1
+  ) ||
+  (
+    ((parsed.bus1 == 1 && parsed.i8 == 1) || (parsed.bus2 == 1 && parsed.i14 == 1)) &&
+    parsed.l12 == 1 && parsed.b8 == 1 && parsed.l18 == 1 && parsed.b10 == 1 &&
+    parsed.bus4 == 1 && parsed.b6 == 1
+  )
+) {
+  db.ref("bus3").set(1);
+} else {
+  db.ref("bus3").set(0);
+}
+
+// For bus4
+if (
+  (
+    ((parsed.bus1 == 1 && parsed.i8 == 1) || (parsed.bus2 == 1 && parsed.i14 == 1)) &&
+    parsed.l12 == 1 && parsed.b8 == 1 && parsed.l18 == 1 && parsed.b10 == 1
+  ) ||
+  (
+    ((parsed.bus1 == 1 && parsed.i7 == 1) || (parsed.bus2 == 1 && parsed.i13 == 1)) &&
+    parsed.l11 == 1 && parsed.b7 == 1 && parsed.l17 == 1 && parsed.b9 == 1 &&
+    parsed.bus3 == 1 && parsed.b6 == 1
+  )
+) {
+  db.ref("bus4").set(1);
+} else {
+  db.ref("bus4").set(0);
+}
+// for feeders
+// Feeder 1
+if (parsed.bus3 == 1 && parsed.i19 === 1) {
+  db.ref("l19").set(1);
+} else {
+  db.ref("l19").set(0);
+}
+
+if (parsed.bus3 == 1 && parsed.i19 === 1 && parsed.b11 === 1) {
+  db.ref("l20").set(1);
+} else {
+  db.ref("l20").set(0);
+}
+
+if (parsed.bus3 == 1 && parsed.i19 === 1 && parsed.b11 === 1 && parsed.i20 === 1) {
+  db.ref("l21").set(1);
+} else {
+  db.ref("l21").set(0);
+}
+
+// Feeder 2
+if (parsed.bus3 == 1 && parsed.i21 === 1) {
+  db.ref("l22").set(1);
+} else {
+  db.ref("l22").set(0);
+}
+
+if (parsed.bus3 == 1 && parsed.i21 === 1 && parsed.b12 === 1) {
+  db.ref("l23").set(1);
+} else {
+  db.ref("l23").set(0);
+}
+
+if (parsed.bus3 == 1 && parsed.i21 === 1 && parsed.b12 === 1 && parsed.i22 === 1) {
+  db.ref("l24").set(1);
+} else {
+  db.ref("l24").set(0);
+}
+
+// Feeder 3
+if (parsed.bus3 == 1 && parsed.i23 === 1) {
+  db.ref("l25").set(1);
+} else {
+  db.ref("l25").set(0);
+}
+
+if (parsed.bus3 == 1 && parsed.i23 === 1 && parsed.b13 === 1) {
+  db.ref("l26").set(1);
+} else {
+  db.ref("l26").set(0);
+}
+
+if (parsed.bus3 == 1 && parsed.i23 === 1 && parsed.b13 === 1 && parsed.i24 === 1) {
+  db.ref("l27").set(1);
+} else {
+  db.ref("l27").set(0);
+}
+
+// Feeder 4
+if (parsed.bus4 == 1 && parsed.i25 === 1) {
+  db.ref("l28").set(1);
+} else {
+  db.ref("l28").set(0);
+}
+
+if (parsed.bus4 == 1 && parsed.i25 === 1 && parsed.b14 === 1) {
+  db.ref("l29").set(1);
+} else {
+  db.ref("l29").set(0);
+}
+
+if (parsed.bus4 == 1 && parsed.i25 === 1 && parsed.b14 === 1 && parsed.i26 === 1) {
+  db.ref("l30").set(1);
+} else {
+  db.ref("l30").set(0);
+}
+
+// Feeder 5
+if (parsed.bus4 == 1 && parsed.i27 === 1) {
+  db.ref("l31").set(1);
+} else {
+  db.ref("l31").set(0);
+}
+
+if (parsed.bus4 == 1 && parsed.i27 === 1 && parsed.b15 === 1) {
+  db.ref("l32").set(1);
+} else {
+  db.ref("l32").set(0);
+}
+
+if (parsed.bus4 == 1 && parsed.i27 === 1 && parsed.b15 === 1 && parsed.i28 === 1) {
+  db.ref("l33").set(1);
+} else {
+  db.ref("l33").set(0);
+}
+
+// Feeder 6
+if (parsed.bus4 == 1 && parsed.i29 === 1) {
+  db.ref("l34").set(1);
+} else {
+  db.ref("l34").set(0);
+}
+
+if (parsed.bus4 == 1 && parsed.i29 === 1 && parsed.b16 === 1) {
+  db.ref("l35").set(1);
+} else {
+  db.ref("l35").set(0);
+}
+
+if (parsed.bus4 == 1 && parsed.i29 === 1 && parsed.b16 === 1 && parsed.i30 === 1) {
+  db.ref("l36").set(1);
+} else {
+  db.ref("l36").set(0);
+}
+
+
+
+}
+</script>
 
 
 </body>
