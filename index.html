@@ -226,403 +226,133 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // Function to set up each isolator
-  function setupIsolator(id) {
+  // Function to set up elements (isolators, breakers, lines, buses)
+  function setupElement(id, type) {
     const ref = db.ref(id);
 
-    // Toggle isolator on click
+    // Toggle on click
     document.getElementById(id).addEventListener('click', () => {
       ref.once('value').then(snapshot => {
         const current = snapshot.val();
-        ref.set(current === 1 ? 0 : 1);
+        ref.set(current === 1 ? 0 : 1).catch(console.error);
       });
     });
 
     // Update color on change
     ref.on('value', (snapshot) => {
       const value = snapshot.val();
-      const color = value === 1 ? 'yellow' : 'white';
+      const color = (type === 'line' || type === 'bus') ? (value === 1 ? 'red' : 'green') : (value === 1 ? 'yellow' : 'white');
       document.getElementById(id).setAttribute('stroke', color);
     });
   }
 
-  // Loop from i1 to i30
-  for (let i = 1; i <= 30; i++) {
-    setupIsolator('i' + i);
-  }
-  
-   // Function to set up each breaker
-  function setupBreaker(id) {
-    const ref = db.ref(id);
+  // Setup isolators, breakers, lines, and buses
+  for (let i = 1; i <= 30; i++) setupElement('i' + i, 'isolator');
+  for (let i = 1; i <= 16; i++) setupElement('b' + i, 'breaker');
+  for (let i = 1; i <= 36; i++) setupElement('l' + i, 'line');
+  for (let i = 1; i <= 4; i++) setupElement('bus' + i, 'bus');
 
-    // Toggle breaker on click
-    document.getElementById(id).addEventListener('click', () => {
-      ref.once('value').then(snapshot => {
-        const current = snapshot.val();
-        ref.set(current === 1 ? 0 : 1);
-      });
-    });
-
-    // Update color on change
-    ref.on('value', (snapshot) => {
-      const value = snapshot.val();
-      const color = value === 1 ? 'yellow' : 'white';
-      document.getElementById(id).setAttribute('stroke', color);
-    });
-  }
-
-  // Loop from b1 to b16
-  for (let i = 1; i <= 16; i++) {
-    setupBreaker('b' + i);
-  }
-  
-     //////////////////////////////////////////// line color 
-     
-  function setupLine(id) {
-    const ref = db.ref(id);
-
-    // Update color on change
-    ref.on('value', (snapshot) => {
-      const value = snapshot.val();
-      const color = value === 1 ? 'red' : 'green';
-      document.getElementById(id).setAttribute('stroke', color);
-    });
-  }
-
-  // Loop from b1 to b16
-  for (let i = 1; i <= 36; i++) {
-    setupLine('l' + i);
-  }
-  
-  
- //////////////////////////////////////////// bus color 
-     
-  function setupBus(id) {
-    const ref = db.ref(id);
-
-    // Update color on busbar
-    ref.on('value', (snapshot) => {
-      const value = snapshot.val();
-      const color = value === 1 ? 'red' : 'green';
-      document.getElementById(id).setAttribute('stroke', color);
-    });
-  }
-
-  // Loop from b1 to b16
-  for (let i = 1; i <= 4; i++) {
-    setupBus('bus' + i);
-  }
-
-
-    // Listen for data changes
-    db.ref("/").on("value", (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        applyLogic(data);
-      }
-    });
-
-   function applyLogic(data) {
-  const keys = [
-    "b1","b2","b3","b4","b5","b6","b7","b8","b9","b10","b11","b12","b13","b14","b15","b16",
-    "bus1","bus2","bus3","bus4",
-    "i1","i2","i3","i4","i5","i6","i7","i8","i9","i10","i11","i12","i13","i14","i15","i16","i17","i18","i19","i20","i21","i22","i23","i24","i25","i26","i27","i28","i29","i30",
-    "l1","l2","l3","l4","l5","l6","l7","l8","l9","l10","l11","l12","l13","l14","l15","l16","l17","l18","l19","l20","l21","l22","l23","l24","l25","l26","l27","l28","l29","l30","l31","l32","l33","l34","l35","l36"
-  ];
-
-  const parsed = {};
-  keys.forEach(k => {
-    parsed[k] = parseInt(data[k]) || 0;
+  // Listen for data changes
+  db.ref("/").on("value", (snapshot) => {
+    const data = snapshot.val();
+    if (data) applyLogic(data);
   });
-  
-   //for line 5
-  if ((parsed.l1 === 1 && parsed.i1 === 1) || (parsed.l9 === 1 && parsed.b1 === 1)) {
-    db.ref("l5").set(1);
-  } else {
-    db.ref("l5").set(0);
+
+  function applyLogic(data) {
+    const keys = [
+      "b1","b2","b3","b4","b5","b6","b7","b8","b9","b10","b11","b12","b13","b14","b15","b16",
+      "bus1","bus2","bus3","bus4",
+      "i1","i2","i3","i4","i5","i6","i7","i8","i9","i10","i11","i12","i13","i14","i15","i16","i17","i18","i19","i20","i21","i22","i23","i24","i25","i26","i27","i28","i29","i30",
+      "l1","l2","l3","l4","l5","l6","l7","l8","l9","l10","l11","l12","l13","l14","l15","l16","l17","l18","l19","l20","l21","l22","l23","l24","l25","l26","l27","l28","l29","l30","l31","l32","l33","l34","l35","l36"
+    ];
+
+    const parsed = {};
+    keys.forEach(k => {
+      parsed[k] = parseInt(data[k]) || 0;
+    });
+
+    // Batch updates for lines and buses
+    const updates = {};
+
+    // Logic for lines
+    updates["l5"] = ((parsed.l1 === 1 && parsed.i1 === 1) || (parsed.l9 === 1 && parsed.b1 === 1)) ? 1 : 0;
+    updates["l6"] = ((parsed.l2 === 1 && parsed.i2 === 1) || (parsed.l10 === 1 && parsed.b2 === 1)) ? 1 : 0;
+    updates["l7"] = ((parsed.l3 === 1 && parsed.i3 === 1) || (parsed.l13 === 1 && parsed.b3 === 1)) ? 1 : 0;
+    updates["l8"] = ((parsed.l4 === 1 && parsed.i4 === 1) || (parsed.l14 === 1 && parsed.b4 === 1)) ? 1 : 0;
+    updates["l9"] = ((parsed.bus1 === 1 && parsed.i5 === 1) || (parsed.bus2 === 1 && parsed.i11 === 1) || (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1)) ? 1 : 0;
+    updates["l10"] = ((parsed.bus1 === 1 && parsed.i6 === 1) || (parsed.bus2 === 1 && parsed.i12 === 1) || (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1)) ? 1 : 0;
+    updates["l11"] = ((parsed.bus1 === 1 && parsed.i7 === 1) || (parsed.bus2 === 1 && parsed.i13 === 1) || (parsed.bus3 === 1 && parsed.b7 === 1 && parsed.l17 === 1 && parsed.b9 === 1)) ? 1 : 0;
+    updates["l12"] = ((parsed.bus1 === 1 && parsed.i8 === 1) || (parsed.bus2 === 1 && parsed.i14 === 1) || (parsed.bus4 === 1 && parsed.b8 === 1 && parsed.l18 === 1 && parsed.b10 === 1)) ? 1 : 0;
+    updates["l13"] = ((parsed.bus1 === 1 && parsed.i9 === 1) || (parsed.bus2 === 1 && parsed.i15 === 1) || (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1)) ? 1 : 0;
+    updates["l14"] = ((parsed.bus1 === 1 && parsed.i10 === 1) || (parsed.bus2 === 1 && parsed.i16 === 1) || (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1)) ? 1 : 0;
+    updates["l15"] = (parsed.bus1 === 1 && parsed.i17 === 1) || (parsed.bus2 === 1 && parsed.i18 === 1 && parsed.b5 === 1) ? 1 : 0;
+    updates["l16"] = (parsed.bus2 === 1 && parsed.i18 === 1) || (parsed.bus1 === 1 && parsed.i17 === 1 && parsed.b5 === 1) ? 1 : 0;
+    updates["l17"] = (parsed.l11 === 1 && parsed.b7 === 1) || (parsed.bus3 === 1 && parsed.b9 === 1) ? 1 : 0;
+    updates["l18"] = (parsed.l12 === 1 && parsed.b8 === 1) || (parsed.bus4 === 1 && parsed.b10 === 1) ? 1 : 0;
+    updates["l19"] = (parsed.bus3 === 1 && parsed.i19 === 1) ? 1 : 0;
+    updates["l20"] = (parsed.bus3 === 1 && parsed.i19 === 1 && parsed.b11 === 1) ? 1 : 0;
+    updates["l21"] = (parsed.bus3 === 1 && parsed.i19 === 1 && parsed.b11 === 1 && parsed.i20 === 1) ? 1 : 0;
+    updates["l22"] = (parsed.bus3 === 1 && parsed.i21 === 1) ? 1 : 0;
+    updates["l23"] = (parsed.bus3 === 1 && parsed.i21 === 1 && parsed.b12 === 1) ? 1 : 0;
+    updates["l24"] = (parsed.bus3 === 1 && parsed.i21 === 1 && parsed.b12 === 1 && parsed.i22 === 1) ? 1 : 0;
+    updates["l25"] = (parsed.bus3 === 1 && parsed.i23 === 1) ? 1 : 0;
+    updates["l26"] = (parsed.bus3 === 1 && parsed.i23 === 1 && parsed.b13 === 1) ? 1 : 0;
+    updates["l27"] = (parsed.bus3 === 1 && parsed.i23 === 1 && parsed.b13 === 1 && parsed.i24 === 1) ? 1 : 0;
+    updates["l28"] = (parsed.bus4 === 1 && parsed.i25 === 1) ? 1 : 0;
+    updates["l29"] = (parsed.bus4 === 1 && parsed.i25 === 1 && parsed.b14 === 1) ? 1 : 0;
+    updates["l30"] = (parsed.bus4 === 1 && parsed.i25 === 1 && parsed.b14 === 1 && parsed.i26 === 1) ? 1 : 0;
+    updates["l31"] = (parsed.bus4 === 1 && parsed.i27 === 1) ? 1 : 0;
+    updates["l32"] = (parsed.bus4 === 1 && parsed.i27 === 1 && parsed.b15 === 1) ? 1 : 0;
+    updates["l33"] = (parsed.bus4 === 1 && parsed.i27 === 1 && parsed.b15 === 1 && parsed.i28 === 1) ? 1 : 0;
+    updates["l34"] = (parsed.bus4 === 1 && parsed.i29 === 1) ? 1 : 0;
+    updates["l35"] = (parsed.bus4 === 1 && parsed.i29 === 1 && parsed.b16 === 1) ? 1 : 0;
+    updates["l36"] = (parsed.bus4 === 1 && parsed.i29 === 1 && parsed.b16 === 1 && parsed.i30 === 1) ? 1 : 0;
+
+    // Logic for buses
+    updates["bus1"] = (
+      (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1 && parsed.i5 === 1) ||
+      (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1 && parsed.i6 === 1) ||
+      (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1 && parsed.i9 === 1) ||
+      (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1 && parsed.i10 === 1) ||
+      (parsed.bus2 === 1 && parsed.i18 === 1 && parsed.b5 === 1 && parsed.i17 === 1)
+    ) ? 1 : 0;
+
+    updates["bus2"] = (
+      (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1 && parsed.i11 === 1) ||
+      (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1 && parsed.i12 === 1) ||
+      (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1 && parsed.i15 === 1) ||
+      (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1 && parsed.i16 === 1) ||
+      (parsed.bus1 === 1 && parsed.i18 === 1 && parsed.b5 === 1 && parsed.i17 === 1)
+    ) ? 1 : 0;
+
+    updates["bus3"] = (
+      (
+        ((parsed.bus1 === 1 && parsed.i7 === 1) || (parsed.bus2 === 1 && parsed.i13 === 1)) &&
+        parsed.l11 === 1 && parsed.b7 === 1 && parsed.l17 === 1 && parsed.b9 === 1
+      ) ||
+      (
+        ((parsed.bus1 === 1 && parsed.i8 === 1) || (parsed.bus2 === 1 && parsed.i14 === 1)) &&
+        parsed.l12 === 1 && parsed.b8 === 1 && parsed.l18 === 1 && parsed.b10 === 1 &&
+        parsed.bus4 === 1 && parsed.b6 === 1
+      )
+    ) ? 1 : 0;
+
+    updates["bus4"] = (
+      (
+        ((parsed.bus1 === 1 && parsed.i8 === 1) || (parsed.bus2 === 1 && parsed.i14 === 1)) &&
+        parsed.l12 === 1 && parsed.b8 === 1 && parsed.l18 === 1 && parsed.b10 === 1
+      ) ||
+      (
+        ((parsed.bus1 === 1 && parsed.i7 === 1) || (parsed.bus2 === 1 && parsed.i13 === 1)) &&
+        parsed.l11 === 1 && parsed.b7 === 1 && parsed.l17 === 1 && parsed.b9 === 1 &&
+        parsed.bus3 === 1 && parsed.b6 === 1
+      )
+    ) ? 1 : 0;
+
+    // Update the database in one go
+    db.ref().update(updates).catch(console.error);
   }
-  
-  // for line 6
-  if ((parsed.l2 === 1 && parsed.i2 === 1) || (parsed.l10 === 1 && parsed.b2 === 1)) {
-    db.ref("l6").set(1);
-  } else {
-    db.ref("l6").set(0);
-  }  
-     //for line 7
-  if ((parsed.l3 === 1 && parsed.i3 === 1) || (parsed.l13 === 1 && parsed.b3 === 1)) {
-    db.ref("l7").set(1);
-  } else {
-    db.ref("l7").set(0);
-  }
-  
-  // for line 8
-  if ((parsed.l4 === 1 && parsed.i4 === 1) || (parsed.l14 === 1 && parsed.b4 === 1)) {
-    db.ref("l8").set(1);
-  } else {
-    db.ref("l8").set(0);
-  }  
-  
-   // for line 9
-  if (((parsed.bus1 === 1 && parsed.i5 === 1) || (parsed.bus2 === 1 && parsed.i11 === 1) || (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1)) ) 
-  {
-    db.ref("l9").set(1);
-  } else {
-    db.ref("l9").set(0);
-  }  
-   
-   
-    // for line 10
-  if (((parsed.bus1 === 1 && parsed.i6 === 1) || (parsed.bus2 === 1 && parsed.i12 === 1) || (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1)) ) 
-  {
-    db.ref("l10").set(1);
-  } else {
-    db.ref("l10").set(0);
-  }  
-  
-  
-    // for line 13
-  if (((parsed.bus1 === 1 && parsed.i9 === 1) || (parsed.bus2 === 1 && parsed.i15 === 1) || (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1)) ) 
-  {
-    db.ref("l13").set(1);
-  } else {
-    db.ref("l13").set(0);
-  }  
-   
-   
-    // for line 114
-  if (((parsed.bus1 === 1 && parsed.i10 === 1) || (parsed.bus2 === 1 && parsed.i16 === 1) || (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1)) ) 
-  {
-    db.ref("l14").set(1);
-  } else {
-    db.ref("l14").set(0);
-  }  
-  
-
-  
-  // for bus1
-  if (( (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1 && parsed.i5 === 1) || (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1 && parsed.i6 === 1) || (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1 && parsed.i9 === 1) || (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1 && parsed.i10 === 1) || (parsed.bus2 === 1 && parsed.i18 === 1  && parsed.b5 === 1 && parsed.i17 === 1))) 
-  {
-    db.ref("bus1").set(1);
-  } else {
-    db.ref("bus1").set(0);
-  }  
-   
-  
-   
-  // for bus2
-  if (( (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1 && parsed.i11 === 1) || (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1 && parsed.i12 === 1) || (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1 && parsed.i15 === 1) || (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1 && parsed.i16 === 1) || (parsed.bus1 === 1 && parsed.i18 === 1  && parsed.b5 === 1 && parsed.i17 === 1))) 
-  {
-    db.ref("bus2").set(1);
-  } else {
-    db.ref("bus2").set(0);
-  }  
-    
-   
-    // for line 11
-  if (((parsed.bus1 === 1 && parsed.i7 === 1) || (parsed.bus2 === 1 && parsed.i13 === 1) || (parsed.bus3 === 1 && parsed.b7 === 1 && parsed.l17 === 1 && parsed.b9 === 1)) ) 
-  {
-    db.ref("l11").set(1);
-  } else {
-    db.ref("l11").set(0);
-  }  
-  
-  
-      // for line 12
-  if (((parsed.bus1 === 1 && parsed.i8 === 1) || (parsed.bus2 === 1 && parsed.i14 === 1) || (parsed.bus4 === 1 && parsed.b8 === 1 && parsed.l18 === 1 && parsed.b10 === 1)) ) 
-  {
-    db.ref("l12").set(1);
-  } else {
-    db.ref("l12").set(0);
-  }  
-  
-  // for bus coupler line line 15 and line 16 
-  
-  // for line 15
-  if ((parsed.bus1 == 1 && parsed.i17 == 1) || (parsed.bus2 == 1 && parsed.i18 == 1 && parsed.b5 == 1))
-    {
-    db.ref("l15").set(1);
-  } else {
-    db.ref("l15").set(0);
-  }  
-  
-    // for line 16
-  if ((parsed.bus2 == 1 && parsed.i18 == 1) || (parsed.bus1 == 1 && parsed.i17 == 1 && parsed.b5 == 1))
-    {
-    db.ref("l16").set(1);
-  } else {
-    db.ref("l16").set(0);
-  }  
-  
-  // for transformer line 17 and 18
-  //for t1 line 
-  if ((parsed.l11 == 1 && parsed.b7 == 1) || (parsed.bus3 == 1 && parsed.b9 == 1))
-    {
-    db.ref("l17").set(1);
-  } else {
-    db.ref("l17").set(0);
-  }  
-  
-  //for t2 line 
-  if ((parsed.l12 == 1 && parsed.b8 == 1) || (parsed.bus4 == 1 && parsed.b10 == 1))
-    {
-    db.ref("l18").set(1);
-  } else {
-    db.ref("l18").set(0);
-  }  
-  
-// For bus3
-if (
-  (
-    ((parsed.bus1 == 1 && parsed.i7 == 1) || (parsed.bus2 == 1 && parsed.i13 == 1)) &&
-    parsed.l11 == 1 && parsed.b7 == 1 && parsed.l17 == 1 && parsed.b9 == 1
-  ) ||
-  (
-    ((parsed.bus1 == 1 && parsed.i8 == 1) || (parsed.bus2 == 1 && parsed.i14 == 1)) &&
-    parsed.l12 == 1 && parsed.b8 == 1 && parsed.l18 == 1 && parsed.b10 == 1 &&
-    parsed.bus4 == 1 && parsed.b6 == 1
-  )
-) {
-  db.ref("bus3").set(1);
-} else {
-  db.ref("bus3").set(0);
-}
-
-// For bus4
-if (
-  (
-    ((parsed.bus1 == 1 && parsed.i8 == 1) || (parsed.bus2 == 1 && parsed.i14 == 1)) &&
-    parsed.l12 == 1 && parsed.b8 == 1 && parsed.l18 == 1 && parsed.b10 == 1
-  ) ||
-  (
-    ((parsed.bus1 == 1 && parsed.i7 == 1) || (parsed.bus2 == 1 && parsed.i13 == 1)) &&
-    parsed.l11 == 1 && parsed.b7 == 1 && parsed.l17 == 1 && parsed.b9 == 1 &&
-    parsed.bus3 == 1 && parsed.b6 == 1
-  )
-) {
-  db.ref("bus4").set(1);
-} else {
-  db.ref("bus4").set(0);
-}
-// for feeders
-// Feeder 1
-if (parsed.bus3 == 1 && parsed.i19 === 1) {
-  db.ref("l19").set(1);
-} else {
-  db.ref("l19").set(0);
-}
-
-if (parsed.bus3 == 1 && parsed.i19 === 1 && parsed.b11 === 1) {
-  db.ref("l20").set(1);
-} else {
-  db.ref("l20").set(0);
-}
-
-if (parsed.bus3 == 1 && parsed.i19 === 1 && parsed.b11 === 1 && parsed.i20 === 1) {
-  db.ref("l21").set(1);
-} else {
-  db.ref("l21").set(0);
-}
-
-// Feeder 2
-if (parsed.bus3 == 1 && parsed.i21 === 1) {
-  db.ref("l22").set(1);
-} else {
-  db.ref("l22").set(0);
-}
-
-if (parsed.bus3 == 1 && parsed.i21 === 1 && parsed.b12 === 1) {
-  db.ref("l23").set(1);
-} else {
-  db.ref("l23").set(0);
-}
-
-if (parsed.bus3 == 1 && parsed.i21 === 1 && parsed.b12 === 1 && parsed.i22 === 1) {
-  db.ref("l24").set(1);
-} else {
-  db.ref("l24").set(0);
-}
-
-// Feeder 3
-if (parsed.bus3 == 1 && parsed.i23 === 1) {
-  db.ref("l25").set(1);
-} else {
-  db.ref("l25").set(0);
-}
-
-if (parsed.bus3 == 1 && parsed.i23 === 1 && parsed.b13 === 1) {
-  db.ref("l26").set(1);
-} else {
-  db.ref("l26").set(0);
-}
-
-if (parsed.bus3 == 1 && parsed.i23 === 1 && parsed.b13 === 1 && parsed.i24 === 1) {
-  db.ref("l27").set(1);
-} else {
-  db.ref("l27").set(0);
-}
-
-// Feeder 4
-if (parsed.bus4 == 1 && parsed.i25 === 1) {
-  db.ref("l28").set(1);
-} else {
-  db.ref("l28").set(0);
-}
-
-if (parsed.bus4 == 1 && parsed.i25 === 1 && parsed.b14 === 1) {
-  db.ref("l29").set(1);
-} else {
-  db.ref("l29").set(0);
-}
-
-if (parsed.bus4 == 1 && parsed.i25 === 1 && parsed.b14 === 1 && parsed.i26 === 1) {
-  db.ref("l30").set(1);
-} else {
-  db.ref("l30").set(0);
-}
-
-// Feeder 5
-if (parsed.bus4 == 1 && parsed.i27 === 1) {
-  db.ref("l31").set(1);
-} else {
-  db.ref("l31").set(0);
-}
-
-if (parsed.bus4 == 1 && parsed.i27 === 1 && parsed.b15 === 1) {
-  db.ref("l32").set(1);
-} else {
-  db.ref("l32").set(0);
-}
-
-if (parsed.bus4 == 1 && parsed.i27 === 1 && parsed.b15 === 1 && parsed.i28 === 1) {
-  db.ref("l33").set(1);
-} else {
-  db.ref("l33").set(0);
-}
-
-// Feeder 6
-if (parsed.bus4 == 1 && parsed.i29 === 1) {
-  db.ref("l34").set(1);
-} else {
-  db.ref("l34").set(0);
-}
-
-if (parsed.bus4 == 1 && parsed.i29 === 1 && parsed.b16 === 1) {
-  db.ref("l35").set(1);
-} else {
-  db.ref("l35").set(0);
-}
-
-if (parsed.bus4 == 1 && parsed.i29 === 1 && parsed.b16 === 1 && parsed.i30 === 1) {
-  db.ref("l36").set(1);
-} else {
-  db.ref("l36").set(0);
-}
-
-
-
-}
 </script>
-
 
 </body>
 </html>
