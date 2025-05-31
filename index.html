@@ -106,7 +106,7 @@
 
 
 
-    
+   
     <!-- 132kv/33kv transformer line   -->
     <polyline id="l17" points="320,460 320,550" fill="none" stroke="#f71111" stroke-width="4"/>
     <polyline id="l18" points="630,460 630,550" fill="none" stroke="#f71111" stroke-width="4"/>
@@ -200,8 +200,15 @@
     <polyline points="750,685 750,705" fill="none" stroke-width="15" id="b15" stroke="#00ff00"/>
     <polyline points="850,685 850,705" fill="none" stroke-width="15" id="b16" stroke="#00ff00"/>
 
+   // transformer circles lines
+   <circle stroke="#00ff00" id="l37" stroke-width="3" fill="none" cx="320" cy="500" r="8"/>
+  <circle stroke="#00ff00" id="l38" stroke-width="3" fill="none" cx="320" cy="510" r="8"/>
+  <circle stroke="#00ff00" id="l39" stroke-width="3" fill="none" cx="630" cy="500" r="8"/>
+  <circle stroke="#00ff00" id="l40" stroke-width="3" fill="none" cx="630" cy="510" r="8"/>
 
-  
+  //MEASURING COMPONENT
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="70" y="160" id="j1v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve"> </text>
+ 
 </g>
 </svg>
 
@@ -249,7 +256,7 @@
   // Setup isolators, breakers, lines, and buses
   for (let i = 1; i <= 30; i++) setupElement('i' + i, 'isolator');
   for (let i = 1; i <= 16; i++) setupElement('b' + i, 'breaker');
-  for (let i = 1; i <= 36; i++) setupElement('l' + i, 'line');
+  for (let i = 1; i <= 40; i++) setupElement('l' + i, 'line');
   for (let i = 1; i <= 4; i++) setupElement('bus' + i, 'bus');
 
   // Listen for data changes
@@ -263,7 +270,7 @@
       "b1","b2","b3","b4","b5","b6","b7","b8","b9","b10","b11","b12","b13","b14","b15","b16",
       "bus1","bus2","bus3","bus4",
       "i1","i2","i3","i4","i5","i6","i7","i8","i9","i10","i11","i12","i13","i14","i15","i16","i17","i18","i19","i20","i21","i22","i23","i24","i25","i26","i27","i28","i29","i30",
-      "l1","l2","l3","l4","l5","l6","l7","l8","l9","l10","l11","l12","l13","l14","l15","l16","l17","l18","l19","l20","l21","l22","l23","l24","l25","l26","l27","l28","l29","l30","l31","l32","l33","l34","l35","l36"
+      "l1","l2","l3","l4","l5","l6","l7","l8","l9","l10","l11","l12","l13","l14","l15","l16","l17","l18","l19","l20","l21","l22","l23","l24","l25","l26","l27","l28","l29","l30","l31","l32","l33","l34","l35","l36","l37","l38","l38","l39","l40"
     ];
 
     const parsed = {};
@@ -307,23 +314,37 @@
     updates["l34"] = (parsed.bus4 === 1 && parsed.i29 === 1) ? 1 : 0;
     updates["l35"] = (parsed.bus4 === 1 && parsed.i29 === 1 && parsed.b16 === 1) ? 1 : 0;
     updates["l36"] = (parsed.bus4 === 1 && parsed.i29 === 1 && parsed.b16 === 1 && parsed.i30 === 1) ? 1 : 0;
+    updates["l37"] = (parsed.l17 === 1) ? 1 : 0;
+    updates["l38"] = (parsed.l17 === 1) ? 1 : 0;
+    updates["l39"] = (parsed.l18 === 1) ? 1 : 0;
+    updates["l40"] = (parsed.l18 === 1) ? 1 : 0;
+   
+const checkBusConditions = (l, i, b, iExtra) =>
+  (l === 1 && i === 1 && b === 1 && iExtra === 1);
 
-    // Logic for buses
-    updates["bus1"] = (
-      (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1 && parsed.i5 === 1) ||
-      (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1 && parsed.i6 === 1) ||
-      (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1 && parsed.i9 === 1) ||
-      (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1 && parsed.i10 === 1) ||
-      (parsed.bus2 === 1 && parsed.i18 === 1 && parsed.b5 === 1 && parsed.i17 === 1)
-    ) ? 1 : 0;
+const busConditions1 = [
+  checkBusConditions(parsed.l1, parsed.i1, parsed.b1, parsed.i5),
+  checkBusConditions(parsed.l2, parsed.i2, parsed.b2, parsed.i6),
+  checkBusConditions(parsed.l3, parsed.i3, parsed.b3, parsed.i9),
+  checkBusConditions(parsed.l4, parsed.i4, parsed.b4, parsed.i10)
+];
 
-    updates["bus2"] = (
-      (parsed.l1 === 1 && parsed.l5 === 1 && parsed.i1 === 1 && parsed.b1 === 1 && parsed.i11 === 1) ||
-      (parsed.l2 === 1 && parsed.l6 === 1 && parsed.i2 === 1 && parsed.b2 === 1 && parsed.i12 === 1) ||
-      (parsed.l3 === 1 && parsed.l7 === 1 && parsed.i3 === 1 && parsed.b3 === 1 && parsed.i15 === 1) ||
-      (parsed.l4 === 1 && parsed.l8 === 1 && parsed.i4 === 1 && parsed.b4 === 1 && parsed.i16 === 1) ||
-      (parsed.bus1 === 1 && parsed.i18 === 1 && parsed.b5 === 1 && parsed.i17 === 1)
-    ) ? 1 : 0;
+const busConditions2 = [
+  checkBusConditions(parsed.l1, parsed.i1, parsed.b1, parsed.i11),
+  checkBusConditions(parsed.l2, parsed.i2, parsed.b2, parsed.i12),
+  checkBusConditions(parsed.l3, parsed.i3, parsed.b3, parsed.i15),
+  checkBusConditions(parsed.l4, parsed.i4, parsed.b4, parsed.i16)
+];
+
+updates["bus1"] = (
+  busConditions1.some(condition => condition) ||
+  (busConditions2.some(condition => condition) && parsed.i18 === 1 && parsed.b5 === 1 && parsed.i17 === 1)
+) ? 1 : 0;
+
+updates["bus2"] = (
+  busConditions2.some(condition => condition) ||
+  (busConditions1.some(condition => condition) && parsed.i18 === 1 && parsed.b5 === 1 && parsed.i17 === 1 && (parsed.l1 === 1 || parsed.l2 === 1 || parsed.l3 === 1 || parsed.l4 === 1))
+) ? 1 : 0;
 
     updates["bus3"] = (
       (
@@ -351,7 +372,33 @@
 
     // Update the database in one go
     db.ref().update(updates).catch(console.error);
+}
+ 
+const voltageText = document.getElementById("j1v");
+let voltageValue = 0;
+let lineStatus = 1;
+
+// Update display based on both values
+function updateVoltageDisplay() {
+  voltageText.textContent = (lineStatus == 0 ? 0 : voltageValue) + " KV";
+}
+
+// Listen for j1v changes
+db.ref("j1v").on("value", (snapshot) => {
+  const value = snapshot.val();
+  if (value !== null && !isNaN(value)) {
+    voltageValue = value;
+    updateVoltageDisplay();
   }
+});
+
+// Listen for l1 changes
+db.ref("l1").on("value", (snapshot) => {
+  const value = snapshot.val();
+  lineStatus = value == 0 ? 0 : 1;
+  updateVoltageDisplay();
+});
+
 </script>
 
 </body>
