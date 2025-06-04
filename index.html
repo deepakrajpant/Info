@@ -434,9 +434,7 @@
         <i class="fas fa-sign-in-alt"></i> Login
       </button>
      
-       <button class="btn btn-secondary" onclick="signup()">
-        <i class="fas fa-user-plus"></i> Create Account
-      </button>
+
      
       <div style="text-align: center; margin-top: 15px;">
         <button class="btn-link" onclick="forgotPassword()">
@@ -444,23 +442,7 @@
         </button>
       </div>
      
-      <div class="divider">
-        <div class="divider-line"></div>
-        <div class="divider-text">or continue with</div>
-        <div class="divider-line"></div>
-      </div>
      
-      <div class="social-login">
-        <button class="social-btn google">
-          <i class="fab fa-google"></i> Google
-        </button>
-        <button class="social-btn facebook">
-          <i class="fab fa-facebook"></i> Facebook
-        </button>
-        <button class="social-btn github">
-          <i class="fab fa-github"></i> GitHub
-        </button>
-      </div>
      
       <div class="footer">
         <p>By continuing, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</p>
@@ -551,34 +533,7 @@
         });
     };
 
-    // Signup function
-    window.signup = function () {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-     
-      if (!email || !password) {
-        showMsg("Please fill in all fields");
-        return;
-      }
-     
-      if (password.length < 6) {
-        showMsg("Password should be at least 6 characters");
-        return;
-      }
-     
-      showLoading();
-     
-      createUserWithEmailAndPassword(auth, email, password)
-        .then(() => {
-          hideLoading();
-          window.location.href = "home.html";
-        })
-        .catch(error => {
-          hideLoading();
-          showMsg(error.message);
-        });
-    };
-
+  
     // Forgot password function
     window.forgotPassword = function () {
       const email = document.getElementById("email").value;
