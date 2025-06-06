@@ -1,7 +1,8 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Smart grid management system</title>
+  <title>Hello, World!</title>
   <style>
     body {
       margin: 0;
@@ -400,8 +401,53 @@ db.ref("l1").on("value", (snapshot) => {
 });
 
 
+
+  
+
+    // Google Form field entry IDs
+    const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLScqXORis4rLpDFDa5dzvYlQtUffn31wHcZrd6cBqGK_KXSO9w/formResponse";
+    const entryBreakerId = "entry.2064408435";
+    const entryStatus = "entry.1474312164";
+    const entryOperator = "entry.1468224498";
+    const operatorName = "Deepak"; // You can make this dynamic
+
+    // Track previous values to detect changes
+    const lastStatus = {};
+
+    // Listen to each breaker for changes
+    for (let i = 1; i <= 16; i++) {
+      const breakerId = "b" + i;
+      db.ref(breakerId).on('value', (snapshot) => {
+        const newValue = snapshot.val();
+        if (lastStatus[breakerId] !== undefined && lastStatus[breakerId] !== newValue) {
+          // Value changed: send to Google Form
+          const statusText = newValue === 1 ? "ON" : "OFF";
+          const formURL = `${formBaseURL}?${entryBreakerId}=${breakerId}&${entryStatus}=${statusText}&${entryOperator}=${operatorName}`;
+          sendForm(formURL);
+        }
+        // Update the stored value
+        lastStatus[breakerId] = newValue;
+      });
+    }
+
+    // Function to submit data to Google Form
+    function sendForm(url) {
+      const form = document.createElement('form');
+      form.action = url;
+      form.method = 'POST';
+      form.target = 'hidden_iframe_' + Math.random();
+      form.style.display = 'none';
+
+      const iframe = document.createElement('iframe');
+      iframe.name = form.target;
+      iframe.style.display = 'none';
+
+      document.body.appendChild(form);
+      document.body.appendChild(iframe);
+      form.submit();
+    }
+
 </script>
 
 </body>
 </html>
-
