@@ -507,9 +507,9 @@
       if (user) {
         document.getElementById("userEmail").innerText = user.email;
 
-        
-        localStorage.setItem("userEmail",userEmail);
-
+        ///////////added
+        localStorage.setItem("userEmail",user.Email);
+       //////////////
         
       } else {
         window.location.href = "index.html";
