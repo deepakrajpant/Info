@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +7,8 @@
     <title>Smart Grid - Breaker Operation History</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment"></script>
     <style>
         :root {
             --primary: #1a73e8;
@@ -35,7 +38,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         
@@ -164,6 +167,8 @@
         .icon-off { background: linear-gradient(135deg, var(--danger), #c50e29); }
         .icon-breakers { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
         .icon-events { background: linear-gradient(135deg, #ab47bc, #7b1fa2); }
+        .icon-duration { background: linear-gradient(135deg, #ff6d00, #e65100); }
+        .icon-operator { background: linear-gradient(135deg, #00acc1, #00838f); }
         
         .stat-info h3 {
             font-size: 28px;
@@ -290,6 +295,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
             text-align: center;
             transition: all 0.3s ease;
+            cursor: pointer;
         }
         
         .breaker-card:hover {
@@ -299,6 +305,16 @@
         
         .breaker-card.active {
             border: 2px solid var(--secondary);
+        }
+        
+        .breaker-card.highlight {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 200, 83, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); }
         }
         
         .breaker-icon {
@@ -327,6 +343,45 @@
         .breaker-info p {
             font-size: 13px;
             color: var(--gray);
+        }
+        
+        .chart-container {
+            height: 300px;
+            margin-bottom: 30px;
+        }
+        
+        .analytics-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .analytics-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .analytics-card h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .analytics-card .value {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .analytics-card .label {
+            color: var(--gray);
+            font-size: 14px;
         }
         
         .footer {
@@ -358,6 +413,33 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
         }
         
         @media (max-width: 900px) {
@@ -397,7 +479,7 @@
                     </div>
                     <div class="logo-text">
                         <h1>Smart Grid Monitoring</h1>
-                        <p>Real-time Breaker Operation History</p>
+                        <p>Breaker Operation History & Analytics</p>
                     </div>
                 </div>
                 <div class="last-updated">
@@ -433,7 +515,7 @@
                     <i class="fas fa-plug"></i>
                 </div>
                 <div class="stat-info">
-                    <h3 id="total-breakers">0</h3>
+                    <h3 id="total-breakers">16</h3>
                     <p>Total Breakers</p>
                 </div>
             </div>
@@ -444,7 +526,65 @@
                 </div>
                 <div class="stat-info">
                     <h3 id="total-events">0</h3>
-                    <p>Total Events</p>
+                    <p>Total Operations</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon icon-duration">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="avg-duration">0</h3>
+                    <p>Avg. Duration</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon icon-operator">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="stat-info">
+                    <h3 id="active-operator">0</h3>
+                    <p>Active Operators</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="analytics-container">
+            <div class="analytics-card">
+                <h3><i class="fas fa-chart-pie"></i> Most Active Breaker</h3>
+                <div class="value" id="most-active-breaker">-</div>
+                <div class="label">with <span id="most-active-count">0</span> operations</div>
+            </div>
+            
+            <div class="analytics-card">
+                <h3><i class="fas fa-user-tie"></i> Most Active Operator</h3>
+                <div class="value" id="most-active-operator">-</div>
+                <div class="label">performed <span id="operator-action-count">0</span> operations</div>
+            </div>
+            
+            <div class="analytics-card">
+                <h3><i class="fas fa-calendar-alt"></i> Busiest Day</h3>
+                <div class="value" id="busiest-day">-</div>
+                <div class="label"><span id="busiest-day-count">0</span> operations</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-chart-line"></i> Operations Trend</h2>
+                <div class="controls">
+                    <select class="filter-select" id="trend-period">
+                        <option value="day">Last 24 Hours</option>
+                        <option value="week">Last 7 Days</option>
+                        <option value="month">Last 30 Days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="operationsChart"></canvas>
                 </div>
             </div>
         </div>
@@ -473,6 +613,10 @@
                             <option value="On">ON</option>
                             <option value="Off">OFF</option>
                         </select>
+                        <select class="filter-select" id="operator-filter">
+                            <option value="all">All Operators</option>
+                            <!-- Operator options will be added dynamically -->
+                        </select>
                         <input type="date" class="filter-select" id="date-filter">
                     </div>
                     
@@ -484,11 +628,13 @@
                                     <th>Breaker #</th>
                                     <th>Status</th>
                                     <th>Duration</th>
+                                    <th>Operated By</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody id="data-table">
                                 <tr>
-                                    <td colspan="4">
+                                    <td colspan="6">
                                         <div class="loader">
                                             <div class="spinner"></div>
                                             <p>Loading breaker data...</p>
@@ -529,7 +675,9 @@
         const breakerGrid = document.getElementById('breaker-grid');
         const breakerFilter = document.getElementById('breaker-filter');
         const statusFilter = document.getElementById('status-filter');
+        const operatorFilter = document.getElementById('operator-filter');
         const dateFilter = document.getElementById('date-filter');
+        const trendPeriod = document.getElementById('trend-period');
         const refreshBtn = document.getElementById('refresh-btn');
         const exportBtn = document.getElementById('export-btn');
         const updateTimeEl = document.getElementById('update-time');
@@ -537,12 +685,29 @@
         const offCountEl = document.getElementById('off-count');
         const totalBreakersEl = document.getElementById('total-breakers');
         const totalEventsEl = document.getElementById('total-events');
+        const avgDurationEl = document.getElementById('avg-duration');
+        const activeOperatorEl = document.getElementById('active-operator');
+        const mostActiveBreakerEl = document.getElementById('most-active-breaker');
+        const mostActiveCountEl = document.getElementById('most-active-count');
+        const mostActiveOperatorEl = document.getElementById('most-active-operator');
+        const operatorActionCountEl = document.getElementById('operator-action-count');
+        const busiestDayEl = document.getElementById('busiest-day');
+        const busiestDayCountEl = document.getElementById('busiest-day-count');
+        let operationsChart;
         
         // Data storage
         let allData = [];
         let currentData = [];
         let breakerStatus = {};
         let uniqueBreakers = new Set();
+        let uniqueOperators = new Set();
+        let operationStats = {
+            mostActiveBreaker: { name: '', count: 0 },
+            mostActiveOperator: { name: '', count: 0 },
+            busiestDay: { date: '', count: 0 },
+            avgDurationOn: 0,
+            avgDurationOff: 0
+        };
         
         // Initialize page
         document.addEventListener('DOMContentLoaded', () => {
@@ -551,7 +716,9 @@
             exportBtn.addEventListener('click', exportCSV);
             breakerFilter.addEventListener('change', filterData);
             statusFilter.addEventListener('change', filterData);
+            operatorFilter.addEventListener('change', filterData);
             dateFilter.addEventListener('change', filterData);
+            trendPeriod.addEventListener('change', updateOperationsChart);
             
             // Set today as default date filter
             const today = new Date().toISOString().split('T')[0];
@@ -570,7 +737,7 @@
                 updateTimeEl.textContent = new Date().toLocaleTimeString();
             } catch (error) {
                 console.error('Error fetching data:', error);
-                dataTable.innerHTML = `<tr><td colspan="4" style="color: var(--danger); text-align: center; padding: 30px;">
+                dataTable.innerHTML = `<tr><td colspan="6" style="color: var(--danger); text-align: center; padding: 30px;">
                     <i class="fas fa-exclamation-triangle"></i> Error loading data. Please try again.
                 </td></tr>`;
                 updateTimeEl.textContent = 'Error';
@@ -582,56 +749,120 @@
             allData = [];
             breakerStatus = {};
             uniqueBreakers.clear();
+            uniqueOperators.clear();
+            operationStats = {
+                mostActiveBreaker: { name: '', count: 0 },
+                mostActiveOperator: { name: '', count: 0 },
+                busiestDay: { date: '', count: 0 },
+                avgDurationOn: 0,
+                avgDurationOff: 0
+            };
             
             const rows = csv.split('\n').slice(1); // Remove header row
+            const breakerCounts = {};
+            const operatorCounts = {};
+            const dayCounts = {};
+            let totalDurationOn = 0;
+            let totalDurationOff = 0;
+            let onEvents = 0;
+            let offEvents = 0;
             
+            // Process each row
             rows.forEach(row => {
                 if (!row.trim()) return;
                 
-                const [timestamp, breakerNum, status] = row.split(',');
-                if (!timestamp || !breakerNum || !status) return;
+                // Split row while handling quoted fields with commas
+                const columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if (columns.length < 4) return;
                 
-                // Clean up data
-                const cleanTimestamp = timestamp.replace(/"/g, '').trim();
-                const cleanBreakerNum = breakerNum.replace(/"/g, '').trim();
-                const cleanStatus = status.replace(/"/g, '').trim();
+                const [timestamp, breakerNum, status, operatedBy] = columns.map(col => col.replace(/"/g, '').trim());
+                if (!timestamp || !breakerNum || !status || !operatedBy) return;
                 
                 // Create data object
                 const dataPoint = {
-                    timestamp: new Date(cleanTimestamp),
-                    breakerNum: cleanBreakerNum,
-                    status: cleanStatus
+                    timestamp: new Date(timestamp),
+                    breakerNum: breakerNum,
+                    status: status,
+                    operatedBy: operatedBy
                 };
                 
                 allData.push(dataPoint);
-                uniqueBreakers.add(cleanBreakerNum);
+                uniqueBreakers.add(breakerNum);
+                uniqueOperators.add(operatedBy);
+                
+                // Track breaker counts for most active breaker
+                breakerCounts[breakerNum] = (breakerCounts[breakerNum] || 0) + 1;
+                if (breakerCounts[breakerNum] > operationStats.mostActiveBreaker.count) {
+                    operationStats.mostActiveBreaker = { name: breakerNum, count: breakerCounts[breakerNum] };
+                }
+                
+                // Track operator counts for most active operator
+                operatorCounts[operatedBy] = (operatorCounts[operatedBy] || 0) + 1;
+                if (operatorCounts[operatedBy] > operationStats.mostActiveOperator.count) {
+                    operationStats.mostActiveOperator = { name: operatedBy, count: operatorCounts[operatedBy] };
+                }
+                
+                // Track day counts for busiest day
+                const day = timestamp.split(' ')[0];
+                dayCounts[day] = (dayCounts[day] || 0) + 1;
+                if (dayCounts[day] > operationStats.busiestDay.count) {
+                    operationStats.busiestDay = { date: formatDate(day), count: dayCounts[day] };
+                }
                 
                 // Track latest status for each breaker
-                if (!breakerStatus[cleanBreakerNum] || 
-                    dataPoint.timestamp > breakerStatus[cleanBreakerNum].timestamp) {
-                    breakerStatus[cleanBreakerNum] = {
-                        status: cleanStatus,
-                        timestamp: dataPoint.timestamp
+                if (!breakerStatus[breakerNum] || 
+                    dataPoint.timestamp > breakerStatus[breakerNum].timestamp) {
+                    breakerStatus[breakerNum] = {
+                        status: status,
+                        timestamp: dataPoint.timestamp,
+                        operatedBy: operatedBy
                     };
                 }
             });
             
+            // Calculate durations between ON and OFF events
+            for (let i = 1; i < allData.length; i++) {
+                const prev = allData[i-1];
+                const current = allData[i];
+                
+                if (prev.breakerNum === current.breakerNum) {
+                    const duration = (current.timestamp - prev.timestamp) / 1000; // in seconds
+                    
+                    if (prev.status === 'On' && current.status === 'Off') {
+                        totalDurationOn += duration;
+                        onEvents++;
+                    } else if (prev.status === 'Off' && current.status === 'On') {
+                        totalDurationOff += duration;
+                        offEvents++;
+                    }
+                }
+            }
+            
+            // Calculate average durations
+            operationStats.avgDurationOn = onEvents > 0 ? formatDuration(totalDurationOn / onEvents) : 'N/A';
+            operationStats.avgDurationOff = offEvents > 0 ? formatDuration(totalDurationOff / offEvents) : 'N/A';
+            
             // Reverse to show latest first
             allData.reverse();
             
-            // Update filter dropdown
+            // Update filter dropdowns
             updateBreakerFilter();
+            updateOperatorFilter();
             
             // Apply filters and render
             filterData();
             updateStats();
+            updateOperationsChart();
         }
         
         // Update breaker filter dropdown
         function updateBreakerFilter() {
             breakerFilter.innerHTML = '<option value="all">All Breakers</option>';
             
-            const breakerArray = Array.from(uniqueBreakers).sort((a, b) => a - b);
+            const breakerArray = Array.from(uniqueBreakers).sort((a, b) => 
+                parseInt(a.replace('b', '')) - parseInt(b.replace('b', ''))
+            );
+            
             breakerArray.forEach(breaker => {
                 const option = document.createElement('option');
                 option.value = breaker;
@@ -640,10 +871,24 @@
             });
         }
         
+        // Update operator filter dropdown
+        function updateOperatorFilter() {
+            operatorFilter.innerHTML = '<option value="all">All Operators</option>';
+            
+            const operatorArray = Array.from(uniqueOperators).sort();
+            operatorArray.forEach(operator => {
+                const option = document.createElement('option');
+                option.value = operator;
+                option.textContent = operator;
+                operatorFilter.appendChild(option);
+            });
+        }
+        
         // Filter data based on selections
         function filterData() {
             const breakerValue = breakerFilter.value;
             const statusValue = statusFilter.value;
+            const operatorValue = operatorFilter.value;
             const dateValue = dateFilter.value;
             
             currentData = allData.filter(item => {
@@ -654,6 +899,11 @@
                 
                 // Status filter
                 if (statusValue !== 'all' && item.status !== statusValue) {
+                    return false;
+                }
+                
+                // Operator filter
+                if (operatorValue !== 'all' && item.operatedBy !== operatorValue) {
                     return false;
                 }
                 
@@ -675,7 +925,7 @@
         // Render data table
         function renderTable() {
             if (currentData.length === 0) {
-                dataTable.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 30px; color: var(--gray);">
+                dataTable.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--gray);">
                     <i class="fas fa-database"></i> No data found for selected filters
                 </td></tr>`;
                 return;
@@ -683,9 +933,11 @@
             
             let tableHTML = '';
             
-            currentData.forEach(item => {
+            currentData.forEach((item, index) => {
                 const formattedDate = item.timestamp.toLocaleString();
-                const duration = calculateDuration(item.timestamp);
+                const duration = index < currentData.length - 1 
+                    ? calculateDuration(item.timestamp, currentData[index + 1].timestamp)
+                    : calculateDuration(item.timestamp, new Date());
                 
                 tableHTML += `
                     <tr>
@@ -693,6 +945,16 @@
                         <td>${item.breakerNum}</td>
                         <td><span class="status-badge ${item.status === 'On' ? 'status-on' : 'status-off'}">${item.status}</span></td>
                         <td>${duration}</td>
+                        <td>${item.operatedBy}</td>
+                        <td>
+                            <span class="tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltiptext">
+                                    Previous state: ${index < currentData.length - 1 ? currentData[index + 1].status : 'Unknown'}<br>
+                                    Duration: ${duration}
+                                </span>
+                            </span>
+                        </td>
                     </tr>
                 `;
             });
@@ -705,23 +967,34 @@
             const selectedBreaker = breakerFilter.value;
             let cardsHTML = '';
             
-            for (const breakerNum in breakerStatus) {
-                const status = breakerStatus[breakerNum].status;
+            // Create array of all 16 breakers (b1 to b16)
+            const allBreakers = Array.from({length: 16}, (_, i) => `b${i+1}`);
+            
+            allBreakers.forEach(breakerNum => {
+                const statusInfo = breakerStatus[breakerNum] || { 
+                    status: 'Unknown', 
+                    timestamp: new Date(0), 
+                    operatedBy: 'N/A' 
+                };
+                const status = statusInfo.status;
                 const isActive = selectedBreaker === 'all' || selectedBreaker === breakerNum;
+                const isHighlighted = selectedBreaker === breakerNum;
                 
                 cardsHTML += `
-                    <div class="breaker-card ${status === 'On' ? 'active' : ''} ${isActive ? 'highlight' : ''}" data-breaker="${breakerNum}">
+                    <div class="breaker-card ${status === 'On' ? 'active' : ''} ${isHighlighted ? 'highlight' : ''}" 
+                         data-breaker="${breakerNum}">
                         <div class="breaker-icon">
                             <i class="fas fa-power-off"></i>
                         </div>
                         <div class="breaker-info">
                             <h3>Breaker ${breakerNum}</h3>
-                            <p>Status: <span class="${status === 'On' ? 'status-on' : 'status-off'}">${status}</span></p>
-                            <p>Last change: ${formatTimeAgo(breakerStatus[breakerNum].timestamp)}</p>
+                            <p>Status: <span class="${status === 'On' ? 'status-on' : status === 'Off' ? 'status-off' : ''}">${status}</span></p>
+                            <p>Last operated by: ${statusInfo.operatedBy}</p>
+                            <p>Last change: ${formatTimeAgo(statusInfo.timestamp)}</p>
                         </div>
                     </div>
                 `;
-            }
+            });
             
             breakerGrid.innerHTML = cardsHTML;
             
@@ -739,39 +1012,176 @@
             // Count ON/OFF statuses
             let onCount = 0;
             let offCount = 0;
+            let unknownCount = 0;
             
             for (const breakerNum in breakerStatus) {
                 if (breakerStatus[breakerNum].status === 'On') {
                     onCount++;
-                } else {
+                } else if (breakerStatus[breakerNum].status === 'Off') {
                     offCount++;
+                } else {
+                    unknownCount++;
                 }
             }
             
+            // Update stats cards
             onCountEl.textContent = onCount;
             offCountEl.textContent = offCount;
-            totalBreakersEl.textContent = Object.keys(breakerStatus).length;
+            totalBreakersEl.textContent = 16; // Fixed 16 breakers
             totalEventsEl.textContent = allData.length;
+            avgDurationEl.textContent = operationStats.avgDurationOn;
+            activeOperatorEl.textContent = uniqueOperators.size;
+            
+            // Update analytics cards
+            mostActiveBreakerEl.textContent = operationStats.mostActiveBreaker.name || '-';
+            mostActiveCountEl.textContent = operationStats.mostActiveBreaker.count || '0';
+            mostActiveOperatorEl.textContent = operationStats.mostActiveOperator.name || '-';
+            operatorActionCountEl.textContent = operationStats.mostActiveOperator.count || '0';
+            busiestDayEl.textContent = operationStats.busiestDay.date || '-';
+            busiestDayCountEl.textContent = operationStats.busiestDay.count || '0';
         }
         
-        // Helper function to calculate duration from timestamp
-        function calculateDuration(timestamp) {
+        // Update operations trend chart
+        function updateOperationsChart() {
+            const period = trendPeriod.value;
+            let labels = [];
+            let data = [];
             const now = new Date();
-            const diffMs = now - timestamp;
-            const diffMins = Math.floor(diffMs / 60000);
             
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins} min ago`;
+            // Prepare data based on selected period
+            if (period === 'day') {
+                // Last 24 hours by hour
+                for (let i = 23; i >= 0; i--) {
+                    const hour = new Date(now);
+                    hour.setHours(now.getHours() - i);
+                    labels.push(hour.getHours() + ':00');
+                    
+                    const hourStart = new Date(hour);
+                    hourStart.setMinutes(0, 0, 0);
+                    const hourEnd = new Date(hour);
+                    hourEnd.setMinutes(59, 59, 999);
+                    
+                    data.push(allData.filter(item => 
+                        item.timestamp >= hourStart && item.timestamp <= hourEnd
+                    ).length);
+                }
+            } else if (period === 'week') {
+                // Last 7 days by day
+                for (let i = 6; i >= 0; i--) {
+                    const day = new Date(now);
+                    day.setDate(now.getDate() - i);
+                    labels.push(day.toLocaleDateString('en-US', { weekday: 'short' }));
+                    
+                    const dayStart = new Date(day);
+                    dayStart.setHours(0, 0, 0, 0);
+                    const dayEnd = new Date(day);
+                    dayEnd.setHours(23, 59, 59, 999);
+                    
+                    data.push(allData.filter(item => 
+                        item.timestamp >= dayStart && item.timestamp <= dayEnd
+                    ).length);
+                }
+            } else if (period === 'month') {
+                // Last 30 days by day
+                for (let i = 29; i >= 0; i--) {
+                    const day = new Date(now);
+                    day.setDate(now.getDate() - i);
+                    labels.push(day.getDate() + '/' + (day.getMonth()+1));
+                    
+                    const dayStart = new Date(day);
+                    dayStart.setHours(0, 0, 0, 0);
+                    const dayEnd = new Date(day);
+                    dayEnd.setHours(23, 59, 59, 999);
+                    
+                    data.push(allData.filter(item => 
+                        item.timestamp >= dayStart && item.timestamp <= dayEnd
+                    ).length);
+                }
+            }
+            
+            // Get or create chart
+            const ctx = document.getElementById('operationsChart').getContext('2d');
+            
+            if (operationsChart) {
+                operationsChart.data.labels = labels;
+                operationsChart.data.datasets[0].data = data;
+                operationsChart.update();
+            } else {
+                operationsChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Operations Count',
+                            data: data,
+                            backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Operations'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: period === 'day' ? 'Hour' : period === 'week' ? 'Day' : 'Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Helper function to calculate duration between two timestamps
+        function calculateDuration(startTime, endTime) {
+            const diffMs = endTime - startTime;
+            const diffSec = Math.floor(diffMs / 1000);
+            
+            if (diffSec < 60) return `${diffSec} sec`;
+            
+            const diffMins = Math.floor(diffSec / 60);
+            if (diffMins < 60) return `${diffMins} min`;
             
             const diffHours = Math.floor(diffMins / 60);
-            if (diffHours < 24) return `${diffHours} hr ago`;
+            if (diffHours < 24) return `${diffHours} hr ${diffMins % 60} min`;
             
             const diffDays = Math.floor(diffHours / 24);
-            return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+            return `${diffDays} day${diffDays > 1 ? 's' : ''} ${diffHours % 24} hr`;
+        }
+        
+        // Format duration for display
+        function formatDuration(seconds) {
+            if (seconds < 60) return `${Math.round(seconds)} sec`;
+            if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+            if (seconds < 86400) return `${Math.round(seconds / 3600)} hr`;
+            return `${Math.round(seconds / 86400)} day${Math.round(seconds / 86400) > 1 ? 's' : ''}`;
         }
         
         // Format time for breaker cards
         function formatTimeAgo(timestamp) {
+            if (timestamp.getTime() === 0) return 'Never';
+            
             const now = new Date();
             const diffMs = now - timestamp;
             const diffMins = Math.floor(diffMs / 60000);
@@ -784,6 +1194,12 @@
             return timestamp.toLocaleDateString();
         }
         
+        // Format date for display
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        }
+        
         // Export data as CSV
         function exportCSV() {
             if (currentData.length === 0) {
@@ -792,13 +1208,14 @@
             }
             
             let csvContent = 'data:text/csv;charset=utf-8,';
-            csvContent += 'Timestamp,Breaker Number,Breaker Status\n';
+            csvContent += 'Timestamp,Breaker Number,Breaker Status,Operated By\n';
             
             currentData.forEach(item => {
                 const row = [
                     item.timestamp.toISOString(),
                     item.breakerNum,
-                    item.status
+                    item.status,
+                    item.operatedBy
                 ].join(',');
                 csvContent += row + '\n';
             });
@@ -816,7 +1233,7 @@
         function showLoader() {
             dataTable.innerHTML = `
                 <tr>
-                    <td colspan="4">
+                    <td colspan="6">
                         <div class="loader">
                             <div class="spinner"></div>
                             <p>Loading breaker data...</p>
@@ -825,50 +1242,6 @@
                 </tr>
             `;
         }
-        
-        // Mock data for demonstration
-        function mockDataForDemo() {
-            const mockData = [];
-            const now = new Date();
-            
-            for (let i = 1; i <= 20; i++) {
-                const breakerNum = Math.floor(Math.random() * 10) + 1;
-                const status = Math.random() > 0.5 ? 'On' : 'Off';
-                const hoursAgo = Math.floor(Math.random() * 24);
-                const minutesAgo = Math.floor(Math.random() * 60);
-                const timestamp = new Date(now);
-                timestamp.setHours(timestamp.getHours() - hoursAgo);
-                timestamp.setMinutes(timestamp.getMinutes() - minutesAgo);
-                
-                mockData.push({
-                    timestamp: timestamp,
-                    breakerNum: breakerNum.toString(),
-                    status: status
-                });
-            }
-            
-            allData = mockData;
-            uniqueBreakers = new Set(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
-            
-            // Create breaker statuses
-            breakerStatus = {};
-            for (let i = 1; i <= 10; i++) {
-                const status = Math.random() > 0.5 ? 'On' : 'Off';
-                const lastChange = new Date(now);
-                lastChange.setHours(lastChange.getHours() - Math.floor(Math.random() * 24));
-                breakerStatus[i.toString()] = {
-                    status: status,
-                    timestamp: lastChange
-                };
-            }
-            
-            updateBreakerFilter();
-            filterData();
-            updateStats();
-        }
-        
-        // Uncomment this line for local demo without accessing Google Sheets
-        // mockDataForDemo();
     </script>
 </body>
 </html>
