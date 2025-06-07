@@ -1155,7 +1155,8 @@
         
         // Helper function to calculate duration between two timestamps
         function calculateDuration(startTime, endTime) {
-            const diffMs = endTime - startTime;
+           // const diffMs = endTime - startTime;
+             const diffMs = startTime - endTime;
             const diffSec = Math.floor(diffMs / 1000);
             
             if (diffSec < 60) return `${diffSec} sec`;
