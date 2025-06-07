@@ -506,6 +506,11 @@
     onAuthStateChanged(auth, user => {
       if (user) {
         document.getElementById("userEmail").innerText = user.email;
+
+        
+        localStorage.setItem("userEmail",userEmail);
+
+        
       } else {
         window.location.href = "index.html";
       }
