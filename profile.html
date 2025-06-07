@@ -409,8 +409,13 @@ db.ref("l1").on("value", (snapshot) => {
     const entryBreakerId = "entry.2064408435";
     const entryStatus = "entry.1474312164";
     const entryOperator = "entry.1468224498";
-    const operatorName = "Deepak"; // You can make this dynamic
 
+  /////////////////////////////////
+   // const operatorName = "Deepak"; // You can make this dynamic
+
+   const operatorName = localStorage.getItem("userEmail");
+  /////////////
+  
     // Track previous values to detect changes
     const lastStatus = {};
 
