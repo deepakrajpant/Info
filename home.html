@@ -288,9 +288,9 @@
         </div>
         <div class="nav-item">
             <i class="fas fa-bolt"></i>
-            <span>Energy Monitoring</span>
+            <span> Monitor & Control</span>
         </div>
-        <div class="nav-item">
+        <div class="nav-item" onclick="goToControl()">
             <i class="fas fa-solar-panel"></i>
             <span>Generation</span>
         </div>
@@ -308,9 +308,9 @@
         </div>
         
        <div class="nav-item" onclick="goToRecords()">
-    <i class="fas fa-file-alt"></i>
-    <span>Records</span>
-</div>
+         <i class="fas fa-file-alt"></i>
+          <span>Records</span>
+       </div>
         
         <div class="nav-item">
             <i class="fas fa-cog"></i>
@@ -331,7 +331,7 @@
           <button class="profile-btn" onclick="goToProfile()">
             <i class="fas fa-user"></i> Profile
           </button>
-          <button class="logout-btn" onclick="logout()">
+            <button class="logout-btn" onclick="logout()">
             <i class="fas fa-sign-out-alt"></i> Logout
           </button>
         </div>
@@ -522,8 +522,8 @@
       });
     };
 
-    window.goToProfile = function () {
-      window.location.href = "profile.html";
+    window.goToControl = function () {
+      window.location.href = "control.html";
     };
     window.goToRecords = function () {
   window.location.href = "recordsb.html";
