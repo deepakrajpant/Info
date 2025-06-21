@@ -219,7 +219,7 @@
 
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="205" y="140" id="butwal2" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Butwal 2</text>
   
-   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="190" y="160" id="j2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">132KV </text>
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="190" y="160" id="j2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve"> </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="230" y="160" id="j2c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">121A </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="190" y="180" id="j2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">16MW </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="230" y="180" id="j2c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">2Mvar </text>
@@ -227,14 +227,14 @@
  // Sampatiya 1 & 2
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="695" y="140" id="s1" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Sampatiya 1</text>
   
-   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="680" y="160" id="s1v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">132KV </text>
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="680" y="160" id="s1v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve"> </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="730" y="160" id="s1c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">121A </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="680" y="180" id="s1v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">16MW </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="730" y="180" id="s1c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">2Mvar </text>
  
   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="865" y="140" id="s2" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Sampatiya 2</text>
   
-   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="850" y="160" id="s2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">132KV </text>
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="850" y="160" id="s2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve"> </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="900" y="160" id="s2c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">121A </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="850" y="180" id="s2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">16MW </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="900" y="180" id="s2c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">2Mvar </text>
@@ -260,7 +260,7 @@
 
 //feeder 3
  
-   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="375" y="820" id="f3" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Feeder 2</text>
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="375" y="820" id="f3" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Feeder 3</text>
   
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="360" y="840" id="f3v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">132KV </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="410" y="840" id="f3c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">121A </text>
@@ -366,9 +366,6 @@
       parsed[k] = parseInt(data[k]) || 0;
     });
 
-    // Batch updates for lines and buses
-    const updates = {};
-
     // Logic for lines
     updates["l5"] = ((parsed.l1 === 1 && parsed.i1 === 1) || (parsed.l9 === 1 && parsed.b1 === 1)) ? 1 : 0;
     updates["l6"] = ((parsed.l2 === 1 && parsed.i2 === 1) || (parsed.l10 === 1 && parsed.b2 === 1)) ? 1 : 0;
@@ -461,35 +458,58 @@ updates["bus2"] = (
     // Update the database in one go
     db.ref().update(updates).catch(console.error);
 }
- 
-const voltageText = document.getElementById("j1v");
-let voltageValue = 0;
-let lineStatus = 1;
-
-// Update display based on both values
-function updateVoltageDisplay() {
-  voltageText.textContent = (lineStatus == 0 ? 0 : voltageValue) + " KV";
-}
-
-// Listen for j1v changes
-db.ref("j1v").on("value", (snapshot) => {
-  const value = snapshot.val();
-  if (value !== null && !isNaN(value)) {
-    voltageValue = value;
-    updateVoltageDisplay();
-  }
-});
-
-// Listen for l1 changes
-db.ref("l1").on("value", (snapshot) => {
-  const value = snapshot.val();
-  lineStatus = value == 0 ? 0 : 1;
-  updateVoltageDisplay();
-});
-
-
-
   
+      // Batch updates for lines and buses
+    const updates = {};
+    // for l1  If j1v == 0 → set l1 = 0 If j1v > 0 → set l1 = 1
+    
+    // Listen for changes on j1v
+    db.ref("j1v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l1").set(l1Value);
+    }
+  });
+
+    db.ref("j2v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l2").set(l1Value);
+    }
+  });
+  
+      db.ref("s1v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l3").set(l1Value);
+    }
+  });
+  
+      db.ref("s2v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l4").set(l1Value);
+    }
+  });
+  
+  
+  // update voltage changes
+  
+  ["j1v", "j2v", "s1v", "s2v"].forEach((id) => {
+  const element = document.getElementById(id);
+  db.ref(id).on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      element.textContent = value + " KV";
+    }
+  });
+});
+
+
 
     // Google Form field entry IDs
     const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLScqXORis4rLpDFDa5dzvYlQtUffn31wHcZrd6cBqGK_KXSO9w/formResponse";
