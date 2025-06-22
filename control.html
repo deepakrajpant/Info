@@ -6,7 +6,7 @@
   <style>
     body {
       margin: 0;
-      height: 150vh;
+      height: 130vh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -365,6 +365,45 @@
     keys.forEach(k => {
       parsed[k] = parseInt(data[k]) || 0;
     });
+
+      // Batch updates for lines and buses
+    const updates = {};
+    // for l1  If j1v == 0 → set l1 = 0 If j1v > 0 → set l1 = 1
+    
+    // Listen for changes on j1v
+    db.ref("j1v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l1").set(l1Value);
+    }
+  });
+
+    db.ref("j2v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l2").set(l1Value);
+    }
+  });
+  
+      db.ref("s1v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l3").set(l1Value);
+    }
+  });
+  
+      db.ref("s2v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l4").set(l1Value);
+    }
+  });
+  
+  
 
     // Logic for lines
     updates["l5"] = ((parsed.l1 === 1 && parsed.i1 === 1) || (parsed.l9 === 1 && parsed.b1 === 1)) ? 1 : 0;
