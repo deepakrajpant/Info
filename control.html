@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <title>Monitor and control</title>
   <style>
     body {
@@ -404,6 +405,8 @@
   });
   
   
+  
+  
 
     // Logic for lines
     updates["l5"] = ((parsed.l1 === 1 && parsed.i1 === 1) || (parsed.l9 === 1 && parsed.b1 === 1)) ? 1 : 0;
@@ -498,6 +501,46 @@ updates["bus2"] = (
     db.ref().update(updates).catch(console.error);
 }
   
+  
+  
+  
+    // ✅ Connect to HiveMQ MQTT broker (your working config, port 8884)
+    const mqttClient = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+
+    mqttClient.on("connect", () => {
+      log("✅ Connected to HiveMQ MQTT broker on topic: myhome/test");
+    });
+
+    mqttClient.on("error", (err) => {
+      log("❌ MQTT connection error: " + err.message);
+    });
+
+    function log(msg) {
+      const logBox = document.getElementById("log");
+      logBox.textContent += msg + "\n";
+      logBox.scrollTop = logBox.scrollHeight;
+      console.log(msg);
+    }
+
+    // ✅ Track these LED lines
+    const lineIds = ["l21", "l24", "l27", "l30", "l33", "l36"];
+    const lineValues = {};
+
+    // ✅ Listen to Firebase changes and publish to MQTT
+    lineIds.forEach((lineId) => {
+      db.ref(lineId).on("value", (snapshot) => {
+        const val = snapshot.val();
+        lineValues[lineId] = val;
+
+        const payload = JSON.stringify(lineValues);
+        mqttClient.publish("led/control", payload); // ✅ topic your ESP32 listens to
+        log("📤 Published to myhome/test: " + payload);
+      });
+    });
+  
+  
+  
+
       // Batch updates for lines and buses
     const updates = {};
     // for l1  If j1v == 0 → set l1 = 0 If j1v > 0 → set l1 = 1
