@@ -511,12 +511,12 @@ db.ref("line").set(lineData).catch(console.error);
     db.ref().update(updates).catch(console.error);
 }
   
-
-// MQTT setup
- const ids = ["l21","l24","l27","l30","l33","l36"], c=mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
-const send=()=>c.connected&&c.publish("led/control",JSON.stringify(Object.fromEntries(ids.map(id=>[id,document.getElementById(id).getAttribute("stroke")=="red"?1:0]))));
+  
+  //MQTT setup with delay 
+const ids=["l21","l24","l27","l30","l33","l36"],c=mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+let t;
+const send=()=>{ clearTimeout(t); t=setTimeout(()=>{ if(c.connected)c.publish("led/control",JSON.stringify(Object.fromEntries(ids.map(id=>[id,document.getElementById(id).getAttribute("stroke")=="red"?1:0])))); },30); };
 ids.forEach(id=>new MutationObserver(send).observe(document.getElementById(id),{attributes:true,attributeFilter:["stroke"]}));
-
 
 
 
