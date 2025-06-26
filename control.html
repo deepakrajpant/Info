@@ -2,12 +2,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <title>Monitor and control</title>
   <style>
     body {
       margin: 0;
-      height: 150vh;
+      height: 130vh;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -220,7 +220,7 @@
 
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="205" y="140" id="butwal2" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Butwal 2</text>
   
-   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="190" y="160" id="j2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">132KV </text>
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="190" y="160" id="j2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve"> </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="230" y="160" id="j2c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">121A </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="190" y="180" id="j2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">16MW </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="230" y="180" id="j2c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">2Mvar </text>
@@ -228,14 +228,14 @@
  // Sampatiya 1 & 2
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="695" y="140" id="s1" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Sampatiya 1</text>
   
-   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="680" y="160" id="s1v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">132KV </text>
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="680" y="160" id="s1v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve"> </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="730" y="160" id="s1c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">121A </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="680" y="180" id="s1v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">16MW </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="730" y="180" id="s1c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">2Mvar </text>
  
   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="865" y="140" id="s2" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Sampatiya 2</text>
   
-   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="850" y="160" id="s2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">132KV </text>
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="850" y="160" id="s2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve"> </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="900" y="160" id="s2c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">121A </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="850" y="180" id="s2v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">16MW </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="900" y="180" id="s2c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">2Mvar </text>
@@ -261,7 +261,7 @@
 
 //feeder 3
  
-   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="375" y="820" id="f3" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Feeder 2</text>
+   <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="375" y="820" id="f3" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">Feeder 3</text>
   
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="360" y="840" id="f3v" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">132KV </text>
    <text fill="#07bf07" stroke="#ffffff" stroke-width="0" x="410" y="840" id="f3c" font-size="12" font-        family="'Epilogue'" text-anchor="start" xml:space="preserve">121A </text>
@@ -367,8 +367,44 @@
       parsed[k] = parseInt(data[k]) || 0;
     });
 
-    // Batch updates for lines and buses
+      // Batch updates for lines and buses
     const updates = {};
+    // for l1  If j1v == 0 → set l1 = 0 If j1v > 0 → set l1 = 1
+    
+    // Listen for changes on j1v
+    db.ref("j1v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l1").set(l1Value);
+    }
+  });
+
+    db.ref("j2v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l2Value = value > 0 ? 1 : 0;
+      db.ref("l2").set(l1Value);
+    }
+  });
+  
+      db.ref("s1v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l3Value = value > 0 ? 1 : 0;
+      db.ref("l3").set(l1Value);
+    }
+  });
+  
+      db.ref("s2v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l4Value = value > 0 ? 1 : 0;
+      db.ref("l4").set(l1Value);
+    }
+  });
+  
+  
 
     // Logic for lines
     updates["l5"] = ((parsed.l1 === 1 && parsed.i1 === 1) || (parsed.l9 === 1 && parsed.b1 === 1)) ? 1 : 0;
@@ -458,77 +494,83 @@ updates["bus2"] = (
         parsed.bus3 === 1 && parsed.b6 === 1
       )
     ) ? 1 : 0;
+    
+const lineData = {
+  l21: parsed.l21,
+  l24: parsed.l24,
+  l27: parsed.l27,
+  l30: parsed.l30,
+  l33: parsed.l33,
+  l36: parsed.l36
+};
+
+db.ref("line").set(lineData).catch(console.error);
+
 
     // Update the database in one go
     db.ref().update(updates).catch(console.error);
 }
-
   
-    // ✅ Connect to HiveMQ MQTT broker (your working config, port 8884)
-    const mqttClient = mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
 
-    mqttClient.on("connect", () => {
-      log("✅ Connected to HiveMQ MQTT broker on topic: myhome/test");
-    });
+// MQTT setup
+ const ids = ["l21","l24","l27","l30","l33","l36"], c=mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+const send=()=>c.connected&&c.publish("led/control",JSON.stringify(Object.fromEntries(ids.map(id=>[id,document.getElementById(id).getAttribute("stroke")=="red"?1:0]))));
+ids.forEach(id=>new MutationObserver(send).observe(document.getElementById(id),{attributes:true,attributeFilter:["stroke"]}));
 
-    mqttClient.on("error", (err) => {
-      log("❌ MQTT connection error: " + err.message);
-    });
 
-    function log(msg) {
-      const logBox = document.getElementById("log");
-      logBox.textContent += msg + "\n";
-      logBox.scrollTop = logBox.scrollHeight;
-      console.log(msg);
+
+
+      // Batch updates for lines and buses
+    const updates = {};
+    // for l1  If j1v == 0 → set l1 = 0 If j1v > 0 → set l1 = 1
+    
+    // Listen for changes on j1v
+    db.ref("j1v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l1").set(l1Value);
     }
+  });
 
-    // ✅ Track these LED lines
-    const lineIds = ["l21", "l24", "l27", "l30", "l33", "l36"];
-    const lineValues = {};
-
-    // ✅ Listen to Firebase changes and publish to MQTT
-    lineIds.forEach((lineId) => {
-      db.ref(lineId).on("value", (snapshot) => {
-        const val = snapshot.val();
-        lineValues[lineId] = val;
-
-        const payload = JSON.stringify(lineValues);
-        mqttClient.publish("led/control", payload); // ✅ topic your ESP32 listens to
-        log("📤 Published to myhome/test: " + payload);
-      });
-    });
+    db.ref("j2v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l2").set(l1Value);
+    }
+  });
+  
+      db.ref("s1v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l3").set(l1Value);
+    }
+  });
+  
+      db.ref("s2v").on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      const l1Value = value > 0 ? 1 : 0;
+      db.ref("l4").set(l1Value);
+    }
+  });
   
   
-
+  // update voltage changes
   
-const voltageText = document.getElementById("j1v");
-let voltageValue = 0;
-let lineStatus = 1;
-
-// Update display based on both values
-function updateVoltageDisplay() {
-  voltageText.textContent = (lineStatus == 0 ? 0 : voltageValue) + " KV";
-}
-
-// Listen for j1v changes
-db.ref("j1v").on("value", (snapshot) => {
-  const value = snapshot.val();
-  if (value !== null && !isNaN(value)) {
-    voltageValue = value;
-    updateVoltageDisplay();
-  }
-});
-
-// Listen for l1 changes
-db.ref("l1").on("value", (snapshot) => {
-  const value = snapshot.val();
-  lineStatus = value == 0 ? 0 : 1;
-  updateVoltageDisplay();
+  ["j1v", "j2v", "s1v", "s2v"].forEach((id) => {
+  const element = document.getElementById(id);
+  db.ref(id).on("value", (snapshot) => {
+    const value = snapshot.val();
+    if (value !== null && !isNaN(value)) {
+      element.textContent = value + " KV";
+    }
+  });
 });
 
 
-
-  
 
     // Google Form field entry IDs
     const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLScqXORis4rLpDFDa5dzvYlQtUffn31wHcZrd6cBqGK_KXSO9w/formResponse";
