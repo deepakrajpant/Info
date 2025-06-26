@@ -512,12 +512,21 @@ db.ref("line").set(lineData).catch(console.error);
 }
   
   
-  //MQTT setup with delay 
-const ids=["l21","l24","l27","l30","l33","l36"],c=mqtt.connect("wss://broker.hivemq.com:8884/mqtt");
+  // MQTT WITH PASSWORD 
+const ids = ["l21", "l24", "l27", "l30", "l33", "l36"],
+      c = mqtt.connect("wss://ed69839b2f994b51900e7cba34345228.s1.eu.hivemq.cloud:8884/mqtt", {
+        username: "deepakrajpant", password: "Deepak@2082"
+      });
 let t;
-const send=()=>{ clearTimeout(t); t=setTimeout(()=>{ if(c.connected)c.publish("led/control",JSON.stringify(Object.fromEntries(ids.map(id=>[id,document.getElementById(id).getAttribute("stroke")=="red"?1:0])))); },30); };
-ids.forEach(id=>new MutationObserver(send).observe(document.getElementById(id),{attributes:true,attributeFilter:["stroke"]}));
-
+const send = () => {
+  clearTimeout(t);
+  t = setTimeout(() => {
+    if (c.connected) c.publish("led/control", JSON.stringify(
+      Object.fromEntries(ids.map(id => [id, document.getElementById(id)?.getAttribute("stroke") === "red" ? 1 : 0]))
+    ));
+  }, 20);
+};
+ids.forEach(id => new MutationObserver(send).observe(document.getElementById(id), {attributes: true, attributeFilter: ["stroke"]}));
 
 
       // Batch updates for lines and buses
