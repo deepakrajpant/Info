@@ -5,6 +5,39 @@
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <title>Monitor and control</title>
   <style>
+  
+      .top-right-buttons {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .mode-button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .mode-button.control {
+      background-color: #4CAF50;
+      color: black;
+    }
+
+    .mode-button.monitor {
+      background-color: #2196F3;
+      color: black;
+    }
+
+    .mode-button.active {
+      outline: 3px solid red;
+    }
+  
     body {
       margin: 0;
       height: 130vh;
@@ -16,6 +49,12 @@
   </style>
 </head>
 <body>
+  
+    <!-- Mode buttons -->
+  <div class="top-right-buttons">
+    <button id="controlBtn" class="mode-button control" onclick="setMode('control')">Control Mode</button>
+    <button id="monitorBtn" class="mode-button monitor active" onclick="setMode('monitor')">Monitor Mode</button>
+  </div>
 
     <svg width="950" height="900" xmlns="http://www.w3.org/2000/svg" version="1.1">
     <g id="Layer_1">
@@ -303,50 +342,77 @@
 
 
 
-
 <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<script>
-  // Firebase config setup
-  const firebaseConfig = {
-    apiKey: "AIzaSyDlxCrKtgn8MPm-hEM6qAALlzuGTdawPKo",
-    authDomain: "systemonoff-e9210.firebaseapp.com",
-    databaseURL: "https://systemonoff-e9210-default-rtdb.firebaseio.com/",
-    projectId: "systemonoff-e9210",
-    storageBucket: "systemonoff-e9210.appspot.com"
-  };
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDlxCrKtgn8MPm-hEM6qAALlzuGTdawPKo",
+      authDomain: "systemonoff-e9210.firebaseapp.com",
+      databaseURL: "https://systemonoff-e9210-default-rtdb.firebaseio.com/",
+      projectId: "systemonoff-e9210",
+      storageBucket: "systemonoff-e9210.appspot.com"
+    };
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  // Function to set up elements (isolators, breakers, lines, buses)
-  function setupElement(id, type) {
-    const ref = db.ref(id);
+    // GLOBAL control mode
+    let controlMode = false;
 
-    // Toggle on click
-    document.getElementById(id).addEventListener('click', () => {
-      ref.once('value').then(snapshot => {
-        const current = snapshot.val();
-        ref.set(current === 1 ? 0 : 1).catch(console.error);
+    function setMode(mode) {
+      controlMode = (mode === 'control');
+      document.getElementById("controlBtn").classList.toggle("active", controlMode);
+      document.getElementById("monitorBtn").classList.toggle("active", !controlMode);
+    }
+
+    function setupElement(id, type) {
+      const ref = db.ref(id);
+
+      // Click event only in control mode
+      document.getElementById(id).addEventListener('click', () => {
+        if (!controlMode) return; // Block clicks in monitor mode
+        ref.once('value').then(snapshot => {
+          const current = snapshot.val();
+          ref.set(current === 1 ? 0 : 1).catch(console.error);
+        });
       });
-    });
 
-    // Update color on change
-    ref.on('value', (snapshot) => {
-      const value = snapshot.val();
-      const color = (type === 'line' || type === 'bus') ? (value === 1 ? 'red' : 'green') : (value === 1 ? 'yellow' : 'white');
-      document.getElementById(id).setAttribute('stroke', color);
-    });
-  }
+      // Listen for Firebase value changes and update color
+      ref.on('value', (snapshot) => {
+        const value = snapshot.val();
+        const color = (type === 'line' || type === 'bus') ?
+          (value === 1 ? 'red' : 'green') :
+          (value === 1 ? 'yellow' : 'white');
+        document.getElementById(id).setAttribute('stroke', color);
+      });
+    }
 
-  // Setup isolators, breakers, lines, and buses
-  for (let i = 1; i <= 30; i++) setupElement('i' + i, 'isolator');
-  for (let i = 1; i <= 16; i++) setupElement('b' + i, 'breaker');
-  for (let i = 1; i <= 40; i++) setupElement('l' + i, 'line');
-  for (let i = 1; i <= 4; i++) setupElement('bus' + i, 'bus');
+  // Setup all isolators (i1–i30)
+for (let i = 1; i <= 30; i++) {
+  setupElement('i' + i, 'isolator');
+}
+
+// Setup all breakers (b1–b16)
+for (let i = 1; i <= 16; i++) {
+  setupElement('b' + i, 'breaker');
+}
+
+// Setup all lines (l1–l40)
+for (let i = 1; i <= 40; i++) {
+  setupElement('l' + i, 'line');
+}
+
+// Setup buses (bus1–bus4)
+for (let i = 1; i <= 4; i++) {
+  setupElement('bus' + i, 'bus');
+}
+
+    // Set initial mode
+    setMode('monitor');
 
   // Listen for data changes
   db.ref("/").on("value", (snapshot) => {
@@ -495,6 +561,8 @@ updates["bus2"] = (
       )
     ) ? 1 : 0;
     
+
+/////////////////
 const lineData = {
   l21: parsed.l21,
   l24: parsed.l24,
@@ -504,6 +572,8 @@ const lineData = {
   l36: parsed.l36
 };
 
+
+//////
 db.ref("line").set(lineData).catch(console.error);
 
 
