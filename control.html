@@ -581,22 +581,31 @@ db.ref("line").set(lineData).catch(console.error);
     db.ref().update(updates).catch(console.error);
 }
   
-  
-  // MQTT WITH PASSWORD 
-const ids = ["l21", "l24", "l27", "l30", "l33", "l36"],
-      c = mqtt.connect("wss://ed69839b2f994b51900e7cba34345228.s1.eu.hivemq.cloud:8884/mqtt", {
-        username: "deepakrajpant", password: "Deepak@2082"
-      });
-let t;
-const send = () => {
-  clearTimeout(t);
-  t = setTimeout(() => {
-    if (c.connected) c.publish("led/control", JSON.stringify(
-      Object.fromEntries(ids.map(id => [id, document.getElementById(id)?.getAttribute("stroke") === "red" ? 1 : 0]))
-    ));
-  }, 20);
+    // MQTT WITH PASSWORD 
+const ids = Array.from({ length: 16 }, (_, i) => `b${i + 1}`);
+const client = mqtt.connect("wss://ed69839b2f994b51900e7cba34345228.s1.eu.hivemq.cloud:8884/mqtt", {
+  username: "deepakrajpant",
+  password: "Deepak@2082"
+});
+
+const sendToMQTT = () => {
+  if (!controlMode || !client.connected) return;
+
+  const data = {};
+  for (let i = 0; i < ids.length; i++) {
+    const el = document.getElementById(ids[i]);
+    data[ids[i]] = el?.getAttribute("stroke") === "yellow" ? 1 : 0;
+  }
+
+  client.publish("led/control", JSON.stringify(data));
+  console.log("📤 Sent to MQTT:", data);
 };
-ids.forEach(id => new MutationObserver(send).observe(document.getElementById(id), {attributes: true, attributeFilter: ["stroke"]}));
+
+ids.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener("click", sendToMQTT);
+});
+
 
 
       // Batch updates for lines and buses
@@ -650,54 +659,56 @@ ids.forEach(id => new MutationObserver(send).observe(document.getElementById(id)
 });
 
 
+// Google Form field entry IDs
+const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLScqXORis4rLpDFDa5dzvYlQtUffn31wHcZrd6cBqGK_KXSO9w/formResponse";
+const entryBreakerId = "entry.2064408435";
+const entryStatus    = "entry.1474312164";
+const entryOperator  = "entry.1468224498";
 
-    // Google Form field entry IDs
-    const formBaseURL = "https://docs.google.com/forms/d/e/1FAIpQLScqXORis4rLpDFDa5dzvYlQtUffn31wHcZrd6cBqGK_KXSO9w/formResponse";
-    const entryBreakerId = "entry.2064408435";
-    const entryStatus = "entry.1474312164";
-    const entryOperator = "entry.1468224498";
+// Operator from localStorage
+const operatorName = localStorage.getItem("userEmail");
 
-  /////////////////////////////////
-   // const operatorName = "Deepak"; // You can make this dynamic
+// Track previous stroke status to detect actual change
+const lastStatus = {};
 
-   const operatorName = localStorage.getItem("userEmail");
-  /////////////
-  
-    // Track previous values to detect changes
-    const lastStatus = {};
+const sendForm = (breakerId, statusText) => {
+  const url = `${formBaseURL}?${entryBreakerId}=${breakerId}&${entryStatus}=${statusText}&${entryOperator}=${encodeURIComponent(operatorName)}`;
+  const form = document.createElement('form');
+  form.action = url;
+  form.method = 'POST';
+  form.target = 'hidden_iframe_' + Math.random();
+  form.style.display = 'none';
 
-    // Listen to each breaker for changes
-    for (let i = 1; i <= 16; i++) {
-      const breakerId = "b" + i;
-      db.ref(breakerId).on('value', (snapshot) => {
-        const newValue = snapshot.val();
-        if (lastStatus[breakerId] !== undefined && lastStatus[breakerId] !== newValue) {
-          // Value changed: send to Google Form
-          const statusText = newValue === 1 ? "ON" : "OFF";
-          const formURL = `${formBaseURL}?${entryBreakerId}=${breakerId}&${entryStatus}=${statusText}&${entryOperator}=${operatorName}`;
-          sendForm(formURL);
-        }
-        // Update the stored value
-        lastStatus[breakerId] = newValue;
-      });
-    }
+  const iframe = document.createElement('iframe');
+  iframe.name = form.target;
+  iframe.style.display = 'none';
 
-    // Function to submit data to Google Form
-    function sendForm(url) {
-      const form = document.createElement('form');
-      form.action = url;
-      form.method = 'POST';
-      form.target = 'hidden_iframe_' + Math.random();
-      form.style.display = 'none';
+  document.body.appendChild(form);
+  document.body.appendChild(iframe);
+  form.submit();
+};
 
-      const iframe = document.createElement('iframe');
-      iframe.name = form.target;
-      iframe.style.display = 'none';
+document.addEventListener("DOMContentLoaded", () => {
+  for (let i = 1; i <= 16; i++) {
+    const id = "b" + i;
+    const el = document.getElementById(id);
+    if (!el) continue;
 
-      document.body.appendChild(form);
-      document.body.appendChild(iframe);
-      form.submit();
-    }
+    el.addEventListener("click", () => {
+      if (!controlMode) return;
+
+      const stroke = el.getAttribute("stroke");
+      const newState = stroke === "yellow" ? "ON" : "OFF";
+
+      if (lastStatus[id] !== newState) {
+        sendForm(id, newState);
+        console.log(`📋 Logged ${id}: ${newState}`);
+        lastStatus[id] = newState;
+      }
+    });
+  }
+});
+
 
 </script>
 
