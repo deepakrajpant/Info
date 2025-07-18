@@ -610,8 +610,8 @@
                         </select>
                         <select class="filter-select" id="status-filter">
                             <option value="all">All Statuses</option>
-                            <option value="On">ON</option>
-                            <option value="Off">OFF</option>
+                            <option value="ON">ON</option>
+                            <option value="OFF">OFF</option>
                         </select>
                         <select class="filter-select" id="operator-filter">
                             <option value="all">All Operators</option>
@@ -828,10 +828,10 @@
                 if (prev.breakerNum === current.breakerNum) {
                     const duration = (current.timestamp - prev.timestamp) / 1000; // in seconds
                     
-                    if (prev.status === 'On' && current.status === 'Off') {
+                    if (prev.status === 'ON' && current.status === 'OFF') {
                         totalDurationOn += duration;
                         onEvents++;
-                    } else if (prev.status === 'Off' && current.status === 'On') {
+                    } else if (prev.status === 'OFF' && current.status === 'ON') {
                         totalDurationOff += duration;
                         offEvents++;
                     }
@@ -943,7 +943,7 @@
                     <tr>
                         <td>${formattedDate}</td>
                         <td>${item.breakerNum}</td>
-                        <td><span class="status-badge ${item.status === 'On' ? 'status-on' : 'status-off'}">${item.status}</span></td>
+                        <td><span class="status-badge ${item.status === 'ON' ? 'status-on' : 'status-off'}">${item.status}</span></td>
                         <td>${duration}</td>
                         <td>${item.operatedBy}</td>
                         <td>
@@ -981,14 +981,14 @@
                 const isHighlighted = selectedBreaker === breakerNum;
                 
                 cardsHTML += `
-                    <div class="breaker-card ${status === 'On' ? 'active' : ''} ${isHighlighted ? 'highlight' : ''}" 
+                    <div class="breaker-card ${status === 'ON' ? 'active' : ''} ${isHighlighted ? 'highlight' : ''}" 
                          data-breaker="${breakerNum}">
                         <div class="breaker-icon">
                             <i class="fas fa-power-off"></i>
                         </div>
                         <div class="breaker-info">
                             <h3>Breaker ${breakerNum}</h3>
-                            <p>Status: <span class="${status === 'On' ? 'status-on' : status === 'Off' ? 'status-off' : ''}">${status}</span></p>
+                            <p>Status: <span class="${status === 'ON' ? 'status-on' : status === 'OFF' ? 'status-off' : ''}">${status}</span></p>
                             <p>Last operated by: ${statusInfo.operatedBy}</p>
                             <p>Last change: ${formatTimeAgo(statusInfo.timestamp)}</p>
                         </div>
@@ -1015,9 +1015,9 @@
             let unknownCount = 0;
             
             for (const breakerNum in breakerStatus) {
-                if (breakerStatus[breakerNum].status === 'On') {
+                if (breakerStatus[breakerNum].status === 'ON') {
                     onCount++;
-                } else if (breakerStatus[breakerNum].status === 'Off') {
+                } else if (breakerStatus[breakerNum].status === 'OFF') {
                     offCount++;
                 } else {
                     unknownCount++;
