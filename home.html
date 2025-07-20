@@ -311,7 +311,12 @@
          <i class="fas fa-file-alt"></i>
           <span>Records</span>
        </div>
-        
+
+       <div class="nav-item" onclick="goTorealtimedata()">
+         <i class="fas fa-file-alt"></i>
+          <span>Real time data</span>
+       </div>
+      
         <div class="nav-item">
             <i class="fas fa-cog"></i>
             <span>Settings</span>
@@ -529,8 +534,12 @@
       window.goToLoadanalysis = function () {
       window.location.href = "ai/loadanalysis.html";
     };
+
+     window.goToLoadanalysis = function () {
+      window.location.href = "realtimedata.html";
+    };
     
-    window.goToRecords = function () {
+    window.goTorealtimedata = function () {
   window.location.href = "recordsb.html";
 };
   </script>
