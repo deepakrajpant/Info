@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🔍 Smart Load Analysis AI</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f2f4f8;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #2b6777;
+    }
+    #chat {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+      height: 300px;
+      overflow-y: auto;
+      background: #f8f8f8;
+      white-space: pre-wrap;
+      margin-bottom: 15px;
+    }
+    input, button {
+      font-size: 16px;
+      padding: 10px;
+      width: 100%;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #2b6777;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1e4c5b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🔍 Smart Load Analysis AI Assistant</h2>
+    <div id="chat"></div>
+    <input type="text" id="userInput" placeholder="Ask about load data..." />
+    <button onclick="sendMessage()">Ask AI</button>
+  </div>
+
+<script>
+  const FIREBASE_API_URL = "https://systemonoff-e9210-default-rtdb.firebaseio.com/aiapi.json";
+  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1QdK_FYNN9n098O1y64rHjzsUWFpMsPVk2Yk_qIoAK8I/export?format=csv&sheet=Load%20analysis";
+
+  async function getAPIKey() {
+    try {
+      const res = await fetch(FIREBASE_API_URL);
+      if (!res.ok) throw new Error("Failed to fetch API key from Firebase");
+      return await res.json();
+    } catch (error) {
+      console.error("API key fetch error:", error);
+      return null;
+    }
+  }
+
+  async function fetchCSVData() {
+    try {
+      const response = await fetch(SHEET_CSV_URL);
+      if (!response.ok) throw new Error("CSV fetch failed");
+      const text = await response.text();
+      return text;
+    } catch (e) {
+      console.error("CSV fetch error:", e);
+      return null;
+    }
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById("userInput");
+    const chat = document.getElementById("chat");
+    const userText = input.value.trim();
+    if (!userText) return;
+
+    chat.innerText += `🧑 You: ${userText}\n`;
+    chat.innerText += `📊 Fetching load data and contacting AI...\n`;
+    input.value = "";
+
+    const apiKey = await getAPIKey();
+    const csv = await fetchCSVData();
+    if (!apiKey || !csv) {
+      chat.innerText += `❌ Error: Missing API key or CSV data.\n\n`;
+      return;
+    }
+
+    const systemPrompt = `
+You are an expert assistant in electrical load analysis. You are analyzing feeder load data provided in CSV format.
+The CSV includes Timestamp, Voltage, Current, MW, and Mvar values for 3 feeders.
+Provide insights based on the user's question, such as load summary, voltage fluctuations, peak loads, feeder comparison, etc.
+User question: ${userText}
+CSV data:
+${csv}
+    `.trim();
+
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://drpant.com.np/",
+          "X-Title": "Smart Load Analysis"
+        },
+        body: JSON.stringify({
+          model: "anthropic/claude-3-haiku",
+          messages: [{ role: "user", content: systemPrompt }]
+        })
+      });
+
+      const data = await res.json();
+      const reply = data?.choices?.[0]?.message?.content || "🤖 No reply received.";
+      chat.innerText += `🤖 AI: ${reply.trim()}\n\n`;
+    } catch (err) {
+      console.error(err);
+      chat.innerText += "❌ Error: Could not get response from AI.\n\n";
+    }
+
+    chat.scrollTop = chat.scrollHeight;
+  }
+</script>
+</body>
+</html>
