@@ -14,7 +14,7 @@
     }
     
     body {
-      background: linear-gradient(135deg, #1a2a6c, #2b6777, #4a9faa);
+      background: linear-gradient(135deg, #0c1a2a, #1e3c5e, #2b6777);
       min-height: 100vh;
       display: flex;
       justify-content: center;
@@ -24,61 +24,95 @@
     
     .container {
       width: 100%;
-      max-width: 800px;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 16px;
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      max-width: 850px;
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
       overflow: hidden;
       display: flex;
       flex-direction: column;
       height: 90vh;
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     .header {
-      background: linear-gradient(to right, #1e4c5b, #2b6777);
+      background: linear-gradient(to right, #152a46, #1e4c5b, #2b6777);
       color: white;
-      padding: 20px;
+      padding: 22px 25px;
       text-align: center;
       position: relative;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .logo {
+      background: linear-gradient(135deg, #4a9faa, #2b6777);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    
+    .header-text {
+      flex: 1;
+      text-align: left;
     }
     
     .header h2 {
       font-size: 1.8rem;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       display: flex;
       align-items: center;
-      justify-content: center;
       gap: 10px;
+      font-weight: 600;
     }
     
     .subtitle {
-      font-size: 1rem;
+      font-size: 1.05rem;
       opacity: 0.9;
       font-weight: 300;
+      max-width: 600px;
     }
     
     .chat-container {
       flex: 1;
-      padding: 20px;
+      padding: 25px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      background: #f2f4f8;
+      gap: 22px;
+      background: #f2f6fa;
+      background-image: linear-gradient(rgba(242, 246, 250, 0.9), rgba(242, 246, 250, 0.9)), 
+                        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231e4c5b' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
     }
     
     .message {
-      max-width: 80%;
-      padding: 15px;
-      border-radius: 12px;
+      max-width: 85%;
+      padding: 18px;
+      border-radius: 16px;
       position: relative;
-      line-height: 1.5;
-      animation: fadeIn 0.3s ease-out;
+      line-height: 1.55;
+      animation: fadeIn 0.4s ease-out;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     }
     
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
+      from { opacity: 0; transform: translateY(15px); }
       to { opacity: 1; transform: translateY(0); }
     }
     
@@ -86,27 +120,29 @@
       background: linear-gradient(to bottom right, #2b6777, #1e4c5b);
       color: white;
       align-self: flex-end;
-      border-bottom-right-radius: 4px;
+      border-bottom-right-radius: 6px;
+      box-shadow: 0 4px 12px rgba(43, 103, 119, 0.25);
     }
     
     .ai-message {
       background: white;
       color: #333;
       align-self: flex-start;
-      border-bottom-left-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-bottom-left-radius: 6px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
     }
     
     .message-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: 10px;
+      margin-bottom: 12px;
       font-weight: 600;
+      font-size: 1.05rem;
     }
     
     .user-message .message-header {
-      color: #b3e5fc;
+      color: #c2e7ff;
     }
     
     .ai-message .message-header {
@@ -114,63 +150,74 @@
     }
     
     .input-container {
-      padding: 20px;
+      padding: 20px 25px;
       background: white;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid #e1e8f0;
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 18px;
     }
     
     .mode-selector {
       display: flex;
-      gap: 12px;
+      gap: 15px;
       justify-content: center;
       align-items: center;
+      flex-wrap: wrap;
     }
     
     .mode-btn {
-      padding: 8px 15px;
-      border-radius: 20px;
-      background: #e0e0e0;
-      border: none;
-      font-size: 14px;
+      padding: 10px 20px;
+      border-radius: 25px;
+      background: #e8f0f7;
+      border: 1px solid #d0dfea;
+      font-size: 15px;
       cursor: pointer;
       transition: all 0.3s;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      font-weight: 500;
+      color: #2b6777;
+    }
+    
+    .mode-btn:hover {
+      background: #d5e5f3;
+      transform: translateY(-2px);
     }
     
     .mode-btn.active {
-      background: #2b6777;
+      background: linear-gradient(to right, #2b6777, #1e4c5b);
       color: white;
-      box-shadow: 0 4px 8px rgba(43, 103, 119, 0.3);
+      box-shadow: 0 6px 15px rgba(43, 103, 119, 0.35);
+      border-color: #1e4c5b;
     }
     
     .input-group {
       display: flex;
-      gap: 10px;
+      gap: 12px;
     }
     
     input {
       flex: 1;
-      padding: 14px 18px;
+      padding: 16px 20px;
       border-radius: 30px;
-      border: 1px solid #ccc;
+      border: 1px solid #d0dfea;
       font-size: 16px;
       outline: none;
       transition: all 0.3s;
-      box-shadow: inset 0 1px 4px rgba(0,0,0,0.1);
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.05);
+      background: #f8fafd;
     }
     
     input:focus {
       border-color: #2b6777;
-      box-shadow: inset 0 1px 4px rgba(0,0,0,0.1), 0 0 0 2px rgba(43, 103, 119, 0.2);
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.05), 0 0 0 3px rgba(43, 103, 119, 0.15);
+      background: white;
     }
     
     button {
-      padding: 14px 24px;
+      padding: 16px 28px;
       border-radius: 30px;
       border: none;
       background: linear-gradient(to right, #2b6777, #1e4c5b);
@@ -181,13 +228,14 @@
       transition: all 0.3s;
       display: flex;
       align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 12px rgba(43, 103, 119, 0.3);
+      gap: 10px;
+      box-shadow: 0 6px 15px rgba(43, 103, 119, 0.4);
     }
     
     button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(43, 103, 119, 0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(43, 103, 119, 0.5);
+      background: linear-gradient(to right, #1e4c5b, #2b6777);
     }
     
     .status-message {
@@ -195,77 +243,156 @@
       padding: 10px;
       color: #2b6777;
       font-style: italic;
-      font-size: 14px;
+      font-size: 14.5px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
     
     .typing-indicator {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
     }
     
     .typing-dot {
-      width: 8px;
-      height: 8px;
+      width: 9px;
+      height: 9px;
       background: #2b6777;
       border-radius: 50%;
-      opacity: 0.6;
-      animation: pulse 1.4s infinite;
+      opacity: 0.7;
+      animation: pulse 1.5s infinite;
     }
     
     .typing-dot:nth-child(2) {
-      animation-delay: 0.2s;
+      animation-delay: 0.25s;
     }
     
     .typing-dot:nth-child(3) {
-      animation-delay: 0.4s;
+      animation-delay: 0.5s;
     }
     
     @keyframes pulse {
       0%, 100% { transform: scale(1); opacity: 0.6; }
-      50% { transform: scale(1.2); opacity: 1; }
-    }
-    
-    .message pre {
-      background: rgba(0,0,0,0.05);
-      padding: 10px;
-      border-radius: 8px;
-      overflow-x: auto;
-      margin-top: 10px;
-      font-size: 14px;
+      50% { transform: scale(1.3); opacity: 1; }
     }
     
     .ai-icon, .user-icon {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
+      font-size: 17px;
+      flex-shrink: 0;
     }
     
     .ai-icon {
-      background: #2b6777;
+      background: linear-gradient(135deg, #2b6777, #1e4c5b);
       color: white;
     }
     
     .user-icon {
-      background: #1e4c5b;
+      background: linear-gradient(135deg, #1e4c5b, #152a46);
       color: white;
     }
     
-    @media (max-width: 600px) {
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px dashed rgba(43, 103, 119, 0.2);
+    }
+    
+    .suggestion {
+      background: rgba(43, 103, 119, 0.08);
+      border: 1px solid rgba(43, 103, 119, 0.15);
+      border-radius: 25px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #2b6777;
+    }
+    
+    .suggestion:hover {
+      background: rgba(43, 103, 119, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 3px 8px rgba(43, 103, 119, 0.15);
+    }
+    
+    .suggestion i {
+      margin-right: 6px;
+      font-size: 12px;
+    }
+    
+    .message-content {
+      line-height: 1.6;
+    }
+    
+    .message-content p {
+      margin-bottom: 12px;
+    }
+    
+    .message-content ul, .message-content ol {
+      padding-left: 25px;
+      margin: 12px 0;
+    }
+    
+    .message-content li {
+      margin-bottom: 8px;
+    }
+    
+    .highlight {
+      background: rgba(255, 228, 100, 0.3);
+      padding: 0 4px;
+      border-radius: 4px;
+    }
+    
+    .data-source {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #2b6777;
+      opacity: 0.8;
+    }
+    
+    @media (max-width: 700px) {
       .container {
         height: 95vh;
+        max-width: 100%;
+        border-radius: 18px;
+      }
+      
+      .header {
+        padding: 18px 20px;
       }
       
       .header h2 {
-        font-size: 1.4rem;
+        font-size: 1.5rem;
+      }
+      
+      .logo {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
       }
       
       .message {
-        max-width: 90%;
+        max-width: 92%;
+        padding: 15px;
+      }
+      
+      .chat-container {
+        padding: 20px;
       }
       
       .input-group {
@@ -275,6 +402,31 @@
       button {
         width: 100%;
         justify-content: center;
+        padding: 15px;
+      }
+      
+      .header-content {
+        gap: 12px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .header h2 {
+        font-size: 1.3rem;
+      }
+      
+      .subtitle {
+        font-size: 0.95rem;
+      }
+      
+      .mode-btn {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      
+      .suggestion {
+        font-size: 13px;
+        padding: 7px 14px;
       }
     }
   </style>
@@ -282,8 +434,15 @@
 <body>
   <div class="container">
     <div class="header">
-      <h2><i class="fas fa-bolt"></i> Smart Load Analysis AI Assistant</h2>
-      <div class="subtitle">Analyzing feeder load data with AI-powered insights</div>
+      <div class="header-content">
+        <div class="logo">
+          <i class="fas fa-bolt"></i>
+        </div>
+        <div class="header-text">
+          <h2>Smart Load Analysis AI Assistant</h2>
+          <div class="subtitle">Analyzing feeder load data with AI-powered insights and smart suggestions</div>
+        </div>
+      </div>
     </div>
     
     <div class="chat-container" id="chat">
@@ -292,19 +451,20 @@
           <div class="ai-icon"><i class="fas fa-robot"></i></div>
           <div>AI Assistant</div>
         </div>
-        <div>Hello! I'm your Smart Load Analysis AI Assistant. I can help you analyze electrical load data including voltage, current, MW, and Mvar values.</div>
-      </div>
-      
-      <div class="message ai-message">
-        <div class="message-header">
-          <div class="ai-icon"><i class="fas fa-robot"></i></div>
-          <div>AI Assistant</div>
+        <div class="message-content">
+          <p>Hello! I'm your Smart Load Analysis AI Assistant. I can help you analyze electrical load data including voltage, current, MW, and Mvar values.</p>
+          <p>Please select your preferred answer length and ask questions like:</p>
+          <ul>
+            <li>Show me peak load times for feeder 2</li>
+            <li>Compare feeder performance last week</li>
+            <li>Identify voltage fluctuations in feeder 1</li>
+            <li>Provide a load summary for yesterday</li>
+          </ul>
+          <div class="data-source">
+            <i class="fas fa-database"></i>
+            <span>Connected to live load data sources</span>
+          </div>
         </div>
-        <div>Please select your preferred answer length and ask questions like:<br>
-          • Show me peak load times<br>
-          • Compare feeder performance<br>
-          • Identify voltage fluctuations<br>
-          • Provide load summary for last week</div>
       </div>
     </div>
     
@@ -328,25 +488,28 @@
         </button>
       </div>
       <div class="status-message" id="status">
-        <i class="fas fa-info-circle"></i> Select answer length above and type your question
+        <i class="fas fa-info-circle"></i> Select answer length and type your question
+      </div>
+      <div class="suggestions">
+        <div class="suggestion" onclick="useSuggestion('Show peak load times for all feeders')">
+          <i class="fas fa-lightbulb"></i>Peak load times
+        </div>
+        <div class="suggestion" onclick="useSuggestion('Compare voltage stability across feeders')">
+          <i class="fas fa-lightbulb"></i>Voltage stability
+        </div>
+        <div class="suggestion" onclick="useSuggestion('Show load trends for the last 7 days')">
+          <i class="fas fa-lightbulb"></i>7-day trends
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Sample data for demonstration
-    const sampleCSV = `Timestamp,Feeder,Voltage (kV),Current (A),MW,Mvar
-2023-10-01 08:00,Feeder1,11.2,145,1.52,0.32
-2023-10-01 08:00,Feeder2,11.1,162,1.68,0.41
-2023-10-01 08:00,Feeder3,11.3,138,1.48,0.29
-2023-10-01 12:00,Feeder1,10.8,210,2.21,0.52
-2023-10-01 12:00,Feeder2,10.7,228,2.38,0.63
-2023-10-01 12:00,Feeder3,10.9,195,2.05,0.47
-2023-10-01 18:00,Feeder1,11.0,180,1.89,0.42
-2023-10-01 18:00,Feeder2,10.9,195,2.05,0.51
-2023-10-01 18:00,Feeder3,11.1,168,1.76,0.38`;
-    
     // Configuration
+    const FIREBASE_API = "AIzaSyDlxCrKtgn8MPm-hEM6qAALlzuGTdawPKo";
+    const FIREBASE_URL = "https://systemonoff-e9210-default-rtdb.firebaseio.com/";
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1QdK_FYNN9n098O1y64rHjzsUWFpMsPVk2Yk_qIoAK8I/export?format=csv&sheet=Load%20analysis";
+    
     let currentMode = "medium";
     const modeButtons = document.querySelectorAll('.mode-btn');
     
@@ -361,7 +524,7 @@
     });
     
     // Function to add a message to the chat
-    function addMessage(sender, text) {
+    function addMessage(sender, text, suggestions = []) {
       const chat = document.getElementById('chat');
       const messageDiv = document.createElement('div');
       messageDiv.classList.add('message');
@@ -373,21 +536,33 @@
             <div class="user-icon"><i class="fas fa-user"></i></div>
             <div>You</div>
           </div>
-          <div>${text}</div>
+          <div class="message-content">${text}</div>
         `;
       } else {
         messageDiv.classList.add('ai-message');
+        let suggestionsHTML = '';
+        
+        if (suggestions.length > 0) {
+          suggestionsHTML = `<div class="suggestions">${suggestions.map(s => 
+            `<div class="suggestion" onclick="useSuggestion('${s}')">
+              <i class="fas fa-lightbulb"></i>${s}
+            </div>`
+          ).join('')}</div>`;
+        }
+        
         messageDiv.innerHTML = `
           <div class="message-header">
             <div class="ai-icon"><i class="fas fa-robot"></i></div>
             <div>AI Assistant</div>
           </div>
-          <div>${text}</div>
+          <div class="message-content">${text}</div>
+          ${suggestionsHTML}
         `;
       }
       
       chat.appendChild(messageDiv);
       chat.scrollTop = chat.scrollHeight;
+      return messageDiv;
     }
     
     // Function to show typing indicator
@@ -405,6 +580,7 @@
           <span class="typing-dot"></span>
           <span class="typing-dot"></span>
           <span class="typing-dot"></span>
+          <span class="typing-text">Analyzing load data...</span>
         </div>
       `;
       
@@ -413,70 +589,91 @@
       return typingDiv;
     }
     
-    // Function to simulate AI response
-    function simulateAIResponse(question) {
-      const responses = {
-        short: {
-          "peak": "Peak load occurs at 12:00 across all feeders, with Feeder2 reaching 2.38 MW.",
-          "voltage": "Voltage fluctuations observed in Feeder1, dropping to 10.8kV during peak.",
-          "compare": "Feeder2 has highest load (2.38MW), Feeder3 most stable voltage.",
-          "summary": "Peak: 12:00 (2.38MW), Avg Voltage: 10.97kV, Min Voltage: 10.7kV."
-        },
-        medium: {
-          "peak": "Peak load occurs consistently at 12:00 for all three feeders. Feeder2 reaches the highest load at 2.38 MW, followed by Feeder1 at 2.21 MW, and Feeder3 at 2.05 MW. This suggests the highest demand period is midday.",
-          "voltage": "Voltage fluctuations are most noticeable in Feeder1, which drops to 10.8kV during peak hours (12:00) from its morning value of 11.2kV. Feeder3 maintains the most stable voltage profile, varying only between 11.3kV and 10.9kV throughout the day.",
-          "compare": "Feeder2 consistently shows the highest load, reaching 2.38 MW at peak. However, it also has the lowest voltage during peak times (10.7kV). Feeder3 has the most stable voltage profile but handles the least load. Feeder1 shows moderate performance in both load and voltage stability.",
-          "summary": "On 2023-10-01, peak load occurred at 12:00 with Feeder2 reaching 2.38 MW. Average voltage across all feeders was 10.97kV, with Feeder2 experiencing the lowest voltage (10.7kV) during peak. The day showed typical load progression with morning, midday peak, and evening reduction."
-        },
-        long: {
-          "peak": `Detailed analysis of peak load times:
-
-Based on the provided data for 2023-10-01:
-• Feeder1: 
-  - Morning (08:00): 1.52 MW
-  - Midday (12:00): 2.21 MW (peak, +45.4% increase)
-  - Evening (18:00): 1.89 MW
-  
-• Feeder2:
-  - Morning: 1.68 MW
-  - Midday: 2.38 MW (peak, +41.7% increase)
-  - Evening: 2.05 MW
-
-• Feeder3:
-  - Morning: 1.48 MW
-  - Midday: 2.05 MW (peak, +38.5% increase)
-  - Evening: 1.76 MW
-
-Key observations:
-1. All feeders follow similar daily load patterns with peak at midday
-2. Feeder2 consistently has the highest load throughout the day
-3. The largest relative increase occurs in Feeder1 (+45.4%)
-4. Evening load remains significantly higher than morning levels
-
-Recommendations:
-- Consider load balancing during peak hours
-- Investigate Feeder2 capacity constraints
-- Monitor Feeder1 for unusual load patterns`
-        }
-      };
+    // Function to generate relevant suggestions based on conversation
+    function generateSuggestions(question) {
+      // If question mentions a specific feeder
+      if (question.match(/feeder\s*[123]/i)) {
+        const feederNum = question.match(/feeder\s*([123])/i)[1];
+        return [
+          `Show voltage graph for Feeder ${feederNum}`,
+          `Analyze current fluctuations for Feeder ${feederNum}`,
+          `Compare Feeder ${feederNum} with others`,
+          `Show load profile for Feeder ${feederNum} yesterday`
+        ];
+      }
       
-      // Determine response type based on keywords
-      let responseType = "compare";
-      if (question.toLowerCase().includes("peak")) responseType = "peak";
-      if (question.toLowerCase().includes("voltage")) responseType = "voltage";
-      if (question.toLowerCase().includes("summary")) responseType = "summary";
+      // If question mentions time
+      if (question.match(/yesterday|today|week|hour|time|day/i)) {
+        return [
+          "Show load data for yesterday",
+          "Analyze morning peak times",
+          "Compare weekday vs weekend loads",
+          "What was the load at 3 PM yesterday?"
+        ];
+      }
       
-      // Get the appropriate response based on mode and type
-      return responses[currentMode][responseType] || 
-             `I've analyzed the load data. The ${currentMode} analysis shows: 
-              • Peak load at 12:00 (2.38 MW on Feeder2)
-              • Voltage range: 10.7kV-11.3kV
-              • Feeder2 has highest load, Feeder3 most stable voltage.
-              
-              For more details, try changing the answer length.`;
+      // If question mentions specific metrics
+      if (question.match(/voltage|current|mw|mvar|power|load/i)) {
+        return [
+          "Show voltage fluctuations for Feeder 1",
+          "Analyze power factor for Feeder 3",
+          "Compare MW between Feeder 1 and Feeder 2",
+          "Identify anomalies in Feeder 2 data"
+        ];
+      }
+      
+      return [
+        "Show peak load times for all feeders",
+        "Compare voltage stability across feeders",
+        "What was the average MW for Feeder 2 yesterday?",
+        "Show load trends for the last 7 days"
+      ];
     }
     
-    // Modified sendMessage function for demonstration
+    // Function to use a suggestion
+    function useSuggestion(text) {
+      document.getElementById('userInput').value = text;
+      sendMessage();
+    }
+    
+    // Typewriter effect for AI responses
+    function typeWriterEffect(element, text, delay = 25) {
+      let i = 0;
+      element.innerHTML = "";
+      
+      function type() {
+        if (i < text.length) {
+          element.innerHTML += text.charAt(i++);
+          setTimeout(type, delay);
+        }
+      }
+      
+      type();
+    }
+    
+    // Fetch API key from Firebase
+    async function getAPIKeyFromFirebase() {
+      try {
+        const res = await fetch(`${FIREBASE_URL}aiapi.json?auth=${FIREBASE_API}`);
+        const key = await res.json();
+        return key;
+      } catch (err) {
+        console.error("Error fetching API Key:", err);
+        return null;
+      }
+    }
+    
+    // Fetch CSV data from Google Sheets
+    async function fetchCSVData() {
+      try {
+        const res = await fetch(SHEET_CSV_URL);
+        return await res.text();
+      } catch (e) {
+        return null;
+      }
+    }
+    
+    // Main function to send message and get AI response
     async function sendMessage() {
       const input = document.getElementById('userInput');
       const status = document.getElementById('status');
@@ -487,7 +684,7 @@ Recommendations:
         return;
       }
       
-      // Add user message
+      // Add user message to UI
       addMessage('user', userText);
       
       // Clear input
@@ -497,20 +694,73 @@ Recommendations:
       // Show typing indicator
       const typingIndicator = showTyping();
       
-      // Simulate delay for processing
-      setTimeout(() => {
+      try {
+        // Fetch API key and CSV data in parallel
+        const [apiKey, csvData] = await Promise.all([
+          getAPIKeyFromFirebase(),
+          fetchCSVData()
+        ]);
+        
+        if (!apiKey || !csvData) {
+          throw new Error("Failed to fetch API key or data");
+        }
+        
+        // Construct the system prompt
+        const systemPrompt = `
+You are an electrical engineer analyzing feeder load data.
+The CSV includes Timestamp, Voltage, Current, MW, Mvar for 3 feeders.
+
+Answer the user's question in ${currentMode} mode.
+
+Question: ${userText}
+CSV:
+${csvData}
+        `.trim();
+        
+        // Send request to OpenRouter AI
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+            "HTTP-Referer": "https://drpant.com.np/",
+            "X-Title": "Smart Load Analysis"
+          },
+          body: JSON.stringify({
+            model: "anthropic/claude-3-haiku",
+            messages: [{ role: "user", content: systemPrompt }]
+          })
+        });
+        
+        const data = await res.json();
+        const reply = data?.choices?.[0]?.message?.content || "🤖 No reply received.";
+        
         // Remove typing indicator
         typingIndicator.remove();
         
-        // Generate simulated response
-        const response = simulateAIResponse(userText);
+        // Generate relevant suggestions
+        const suggestions = generateSuggestions(userText);
         
-        // Add AI response
-        addMessage('ai', response);
+        // Add AI response to UI with suggestions
+        const aiMessage = addMessage('ai', "", suggestions);
+        const contentElement = aiMessage.querySelector('.message-content');
+        
+        // Apply typewriter effect to AI response
+        typeWriterEffect(contentElement, reply.trim());
         
         // Update status
         status.innerHTML = `<i class="fas fa-check-circle"></i> Analysis complete. Mode: ${currentMode.charAt(0).toUpperCase() + currentMode.slice(1)}`;
-      }, 2000);
+        
+      } catch (err) {
+        console.error(err);
+        
+        // Remove typing indicator
+        typingIndicator.remove();
+        
+        // Show error message
+        addMessage('ai', "❌ Error: Failed to fetch data or get AI response. Please try again.");
+        status.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error occurred. Please try again.`;
+      }
     }
     
     // Allow sending message with Enter key
