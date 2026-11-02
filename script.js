@@ -761,7 +761,7 @@ function renderHomeScreen() {
     <div class="hero" data-go="sets">
       <small>JFT-BASIC · PRACTICE SERIES</small>
       <h2>Mock Test 2026</h2>
-      <p>Six full-length practice sets built on the official 4-section JFT pattern.</p>
+      <p>OCTOBER–NOVEMBER IMPORTANT SETS /nYour Next Step Towards JFT Success.</p>
       <div class="hero-stats">
         <div><strong>6</strong><span>Sets</span></div>
         <div><strong>${completed}</strong><span>Completed</span></div>
@@ -2450,7 +2450,7 @@ async function openPayment(planId){
  if(!pending.empty)return modal("Request already pending","Your payment request is waiting for admin verification. Please do not submit again.");
  if(c.exists())appConfig={...appConfig,...c.data()};
  const email=state.user.email||"";
- modal("Pay with eSewa",`<p><b>${esc(plan.name)} · NPR ${Number(plan.price)}</b> · ${Number(plan.days)} days</p><img class="payment-qr" src="${esc(resolveUrl(appConfig.qrPath))}" alt="Admin eSewa payment QR"><p>eSewa number</p><button class="copy-value" id="copyEsewa">${esc(appConfig.esewaNumber||"Admin must configure the payment number")} · Copy</button><p class="mt-2">Payment remark: your email</p><button class="copy-value" id="copyEmail">${esc(email)} · Copy</button><label class="field mt-2">eSewa transaction reference<input id="paymentRef" class="input" maxlength="120" value="${esc(state._paymentDraft?.planId===planId?state._paymentDraft.reference:"")}" placeholder="Enter transaction ID" required></label><p class="muted small">Use this same browser after payment. Admin verification is required.</p>`,[{label:"Cancel",cls:"btn-ghost"},{label:"I have completed payment",keepOpen:true,onClick:async()=>{
+ modal("Pay with eSewa",`<p><b>${esc(plan.name)} · NPR ${Number(plan.price)}</b> · ${Number(plan.days)} days</p><img class="payment-qr" src="${esc(resolveUrl(appConfig.qrPath))}" alt="Admin eSewa payment QR"><p>eSewa number</p><button class="copy-value" id="copyEsewa">${esc(appConfig.esewaNumber||"Admin must configure the payment number")} · Copy</button><p class="mt-2">Payment remark: your email</p><button class="copy-value" id="copyEmail">${esc(email)} · Copy</button><label class="field mt-2">eSewa transaction reference<input id="paymentRef" class="input" maxlength="120" value="${esc(state._paymentDraft?.planId===planId?state._paymentDraft.reference:"")}" placeholder="Enter transaction ID" required></label><p class="muted small">Use this same browser after payment. Admin verification is required.</p>`,[{label:"Cancel",cls:"btn-ghost"},{label:"Payment completed",keepOpen:true,onClick:async()=>{
  const ref=$("paymentRef").value.trim();state._paymentDraft={planId,reference:ref};if(!ref)return toast("Enter your eSewa transaction reference","err");
  if(state._requestSubmitting)return;
  state._requestSubmitting=true;
