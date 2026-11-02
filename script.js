@@ -26,7 +26,7 @@ const FIREBASE_CONFIG = {
   measurementId: "G-V3M5626QM5"
 };
 const ADMIN_EMAIL = "deepakrajpant978@gmail.com";
-const REPO_BASE = "https://deepakrajpant.github.io/testapi/";
+const REPO_BASE = "https://deepakrajpant.github.io/info/";
 const QUESTIONS_DOC = "jftoctnovset/QORwII8D7qLZ7wuCDW36";
 const CACHE_KEY = "dj_q_cache_v5";               // v5: localStorage + 60min
 const CACHE_TTL = 60 * 60 * 1000;                // was 30 min
