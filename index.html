@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+ <meta name="theme-color" content="#173d53">
+ <meta name="description" content="Dream Japan JFT mock tests, listening practice and learning progress.">
+ <meta name="apple-mobile-web-app-capable" content="yes">
+ <meta name="apple-mobile-web-app-status-bar-style" content="default">
+ <title>Dream Japan | JFT Mock Test</title>
+ <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+ <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+ <link rel="manifest" href="./manifest.webmanifest">
+ <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+ <link rel="apple-touch-icon" href="./icons/icon-192.png">
+ <link rel="stylesheet" href="./style.css?v=4.0.0">
+</head>
+<body>
+ <div id="app"><div class="loading-screen"><div class="login-logo">DJ</div><h1>Dream Japan</h1><p>Preparing your learning space</p><div class="spinner" role="status" aria-label="Loading"></div></div></div>
+ <div id="toast" class="toast" role="status" aria-live="polite"></div>
+ <div class="overlay" id="modal"></div>
+ <noscript>Enable JavaScript to use Dream Japan mock tests.</noscript>
+ <script type="module">
+  import('./script.js?v=4.0.0').catch(error => {
+   console.error(error);
+   const box = document.createElement('div'); box.className='loading-screen';
+   const title=document.createElement('h2');title.textContent='Dream Japan could not start';
+   const text=document.createElement('p');text.textContent='Check your connection and reload. If the problem continues, contact the admin.';
+   const retry=document.createElement('button');retry.className='btn btn-primary';retry.textContent='Reload';retry.onclick=()=>location.reload();
+   box.append(title,text,retry);document.getElementById('app').replaceChildren(box);
+  });
+ </script>
+</body>
+</html>

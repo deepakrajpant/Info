@@ -1,0 +1,131 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn(){ return request.auth != null; }
+  function admin(){
+   return signedIn()
+    && request.auth.token.email == 'deepakrajpant978@gmail.com'
+    && request.auth.token.email_verified == true;
+  }
+  function owner(uid){ return signedIn() && request.auth.uid == uid; }
+  function activeAccount(){
+   return signedIn()
+    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
+  }
+  function paid(){
+   let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+   return signedIn() && u.status == 'active'
+    && u.premium != null && u.premium.expiry is timestamp
+    && u.premium.expiry > request.time;
+  }
+  function validRequest(d){
+   let plan = get(/databases/$(database)/documents/plans/$(d.planId)).data;
+   return d.keys().hasOnly(['uid','email','name','type','planId','planName','planPrice','days','paymentRef','deviceId','status','createdAt'])
+    && d.uid == request.auth.uid && d.email == request.auth.token.email
+    && d.name is string && d.name.size() <= 100
+    && d.type == 'premium' && d.status == 'pending'
+    && d.planId is string && d.planName == plan.name
+    && d.planPrice is number && d.planPrice >= 0 && d.planPrice == plan.price
+    && d.days is int && d.days >= 1 && d.days <= 3650 && d.days == plan.days
+    && plan.get('active', true) != false
+    && d.paymentRef is string && d.paymentRef.size() >= 1 && d.paymentRef.size() <= 120
+    && d.deviceId is string && d.deviceId.size() == 64
+    && d.createdAt == request.time;
+  }
+  function validResult(d, attemptId){
+   return d.keys().hasOnly(['cloudSaved','attemptId','answers','setIdx','setName','score','maxScore','percentage','correct','wrong','unanswered','sections','timeUsed','startedAt','submittedAt','scoreSource'])
+    && d.attemptId == attemptId && d.scoreSource == 'browser'
+    && d.cloudSaved == true && d.maxScore == 250
+    && d.score is number && d.score >= 0 && d.score <= 250
+    && d.percentage is int && d.percentage >= 0 && d.percentage <= 100
+    && d.setIdx is int && d.setIdx >= 1 && d.setIdx <= 6
+    && d.correct is int && d.correct >= 0 && d.wrong is int && d.wrong >= 0
+    && d.unanswered is int && d.unanswered >= 0
+    && d.timeUsed is number && d.timeUsed >= 0 && d.timeUsed <= 3600
+    && d.sections is list && d.answers is list
+    && d.submittedAt == request.time;
+  }
+  function validLeaderboard(d, uid){
+   let attempt = getAfter(/databases/$(database)/documents/users/$(uid)/results/$(d.latestAttempt)).data;
+   return d.keys().hasOnly(['name','bestScore','streak','latestAttempt','updatedAt','scoreSource'])
+    && d.name is string && d.name.size() <= 80
+    && d.bestScore is int && d.bestScore >= 0 && d.bestScore <= 100
+    && d.streak is number && d.streak >= 0
+    && d.latestAttempt is string && d.latestAttempt.size() <= 120
+    && d.scoreSource == 'browser' && d.updatedAt == request.time
+    && attempt.scoreSource == 'browser' && attempt.attemptId == d.latestAttempt;
+  }
+  match /users/{uid} {
+   allow read: if owner(uid) || admin();
+   allow create: if owner(uid)
+    && request.resource.data.keys().hasOnly(['name','email','photoURL','emailVerified','role','status','practiceAccess','premium','bookmarks','streak','bestScore','createdAt','lastLogin'])
+    && request.resource.data.role == 'student' && request.resource.data.status == 'active'
+    && request.resource.data.premium == null && request.resource.data.practiceAccess == false
+    && request.resource.data.bestScore == 0
+    && request.resource.data.bookmarks is list && request.resource.data.bookmarks.size() == 0
+    && request.resource.data.streak == {'count':0,'last':null}
+    && request.resource.data.email == request.auth.token.email;
+   allow update: if admin()
+    || (owner(uid)
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','photoURL','lastLogin','bookmarks','streak'])
+      && request.resource.data.bookmarks is list && request.resource.data.bookmarks.size() <= 1000)
+    || (owner(uid) && paid()
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bestScore'])
+      && request.resource.data.bestScore is int
+      && request.resource.data.bestScore >= 0 && request.resource.data.bestScore <= 100
+      && request.resource.data.bestScore == getAfter(/databases/$(database)/documents/leaderboard/$(uid)).data.bestScore);
+   allow delete: if admin();
+   match /results/{attemptId} {
+    allow read: if owner(uid) || admin();
+    allow create: if (admin() || (owner(uid) && paid())) && validResult(request.resource.data, attemptId);
+    allow update, delete: if admin();
+   }
+  }
+  match /accessRequests/{rid} {
+   // An owner may get their not-yet-created deterministic request document.
+   allow get: if admin() || (signedIn() && (rid == request.auth.uid || resource.data.uid == request.auth.uid));
+   allow list: if admin() || (signedIn() && resource.data.uid == request.auth.uid);
+   allow create: if signedIn() && rid == request.auth.uid && activeAccount() && validRequest(request.resource.data);
+   allow update: if admin()
+    || (signedIn() && rid == request.auth.uid && activeAccount()
+      && resource.data.uid == request.auth.uid && resource.data.status in ['approved','rejected']
+      && validRequest(request.resource.data));
+   allow delete: if admin();
+  }
+  match /plans/{id} { allow read: if true; allow write: if admin(); }
+  match /appConfig/{id} { allow read: if true; allow write: if admin(); }
+  match /jftoctnovset/{id} {
+   allow read: if admin() || (signedIn() && paid());
+   allow write: if admin();
+  }
+  match /deviceBindings/{uid} {
+   allow get: if owner(uid) || admin();
+   allow list: if admin();
+   // This stores a browser preference, not a cryptographic device identity.
+   allow create: if admin() || (owner(uid) && paid()
+    && request.resource.data.keys().hasOnly(['deviceId','boundAt'])
+    && request.resource.data.deviceId is string && request.resource.data.deviceId.size() == 64
+    && request.resource.data.boundAt == request.time);
+   allow update, delete: if admin();
+  }
+  match /leaderboard/{uid} {
+   // Scores are browser-reported practice scores, not server-verified results.
+   allow read: if signedIn();
+   allow create: if (admin() || (owner(uid) && paid()))
+    && validLeaderboard(request.resource.data, uid)
+    && request.resource.data.bestScore == getAfter(/databases/$(database)/documents/users/$(uid)/results/$(request.resource.data.latestAttempt)).data.percentage;
+   allow update: if (admin() || (owner(uid) && paid()))
+    && validLeaderboard(request.resource.data, uid)
+    && request.resource.data.bestScore >= resource.data.bestScore
+    && (request.resource.data.bestScore == resource.data.bestScore
+      || request.resource.data.bestScore == getAfter(/databases/$(database)/documents/users/$(uid)/results/$(request.resource.data.latestAttempt)).data.percentage);
+   allow delete: if admin();
+  }
+  match /adminAuditLogs/{id} {
+   allow read, create: if admin();
+   allow update, delete: if false;
+  }
+  match /serverAttempts/{id} { allow read, write: if false; }
+  match /{document=**} { allow read, write: if false; }
+ }
+}
