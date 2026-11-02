@@ -760,10 +760,11 @@ function renderHomeScreen() {
   return `${topbarHTML()}<div class="wrap">
     <div class="hero" data-go="sets">
       <small>JFT-BASIC · PRACTICE SERIES</small>
-      <h2>Mock Test 2026</h2>
-      <p>OCTOBER–NOVEMBER IMPORTANT SETS /nYour Next Step Towards JFT Success.</p>
-      <div class="hero-stats">
-        <div><strong>6</strong><span>Sets</span></div>
+    <h2>Mock Test 2026</h2>
+<p><strong>OCTOBER–NOVEMBER IMPORTANT SETS</strong><br>
+Your Next Step Towards JFT Success.</p>
+<div class="hero-stats">
+  <div><strong>6</strong><span>Sets</span></div>
         <div><strong>${completed}</strong><span>Completed</span></div>
         <div><strong>${completed ? best + "%" : "–"}</strong><span>Best %</span></div>
       </div>
