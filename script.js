@@ -669,6 +669,7 @@ function render() {
   } else if (s === "loading") html = renderLoading();
   else if (s === "login" || s === "signup" || s === "home") html = renderHomeScreen();
   else if (s === "sets") html = renderSets();
+  else if (s === "past-sets") html = renderPastSets();
   else if (s === "start") html = renderStart();
   else if (s === "exam") html = renderExam();
   else if (s === "result") html = renderResult();
@@ -771,6 +772,7 @@ Your Next Step Towards JFT Success.</p>
       <div class="hero-cta">Start practising →</div>
     </div>
     ${streak > 0 ? `<div class="streak-banner"><div class="fire"></div><div style="flex:1"><h4>${streak}-day streak!</h4><p>Keep it up — practice daily to improve faster.</p></div></div>` : ""}
+    <button type="button" class="past-home-card" data-go="past-sets"><span class="past-home-icon">▧</span><span class="past-home-copy"><strong>Past JFT Mock Test Sets</strong><small>Explore previous practice sets</small></span><span class="past-home-arrow">→</span></button>
     ${!hasAccess ? `<div class="card mt-2" style="background:#fef3c7;border-color:var(--orange)">
       <div class="flex" style="align-items:flex-start">
         <div style="font-size:28px"></div>
@@ -818,6 +820,39 @@ Your Next Step Towards JFT Success.</p>
         </div>`).join("") : `<p class="muted center" style="padding:24px 0">No attempts yet. Start your first exam!</p>`}
     </div>
   </div>${bottomNavHTML("home")}`;
+}
+
+
+/* Previous Google Forms: separate from the premium Firestore question bank. */
+const PAST_SETS = [
+  [1,"KOUEN","https://forms.gle/84UAEy8fbNk2L4F38"],
+  [2,"TOIRE","https://forms.gle/oGivZzEUkubeyX4TA"],
+  [3,"CHICHI","https://forms.gle/GdpnBd9xjJmskvFa6"],
+  [4,"BASU","https://forms.gle/fxeDNxuMP4Npuy7YA"],
+  [5,"JITENSHA","https://forms.gle/T8B7xjDQLx78tdjV8"],
+  [6,"TANA","https://forms.gle/j8wn5T7soFx6nhmt8"],
+  [7,"KAGI","https://forms.gle/MCxEogDjeP35Wbqu9"],
+  [10,"SARADA","https://forms.gle/6AXNWdoCakJ6dUiN8"],
+  [11,"BASU","https://forms.gle/EtRoXF9wNcBYWTLG6"],
+  [12,"CHICHI","https://forms.gle/QS72Eu13JQvZPhdm9"]
+];
+function renderPastSets() {
+  return `${topbarHTML()}<main class="wrap past-page">
+    <button class="past-back" data-go="home" type="button">← &nbsp; Back to Home</button>
+    <section class="past-hero"><div class="past-hero-glow"></div>
+      <span class="past-eyebrow">DREAM JAPAN · JFT-BASIC</span>
+      <h2>Past Mock<br>Test Sets<span class="past-dot">.</span></h2>
+      <p>Practice previous JFT mock tests and build your confidence for exam day.</p>
+      <div class="past-hero-footer"><span><b>${PAST_SETS.length}</b> Available Sets</span><span>Practice Collection ↗</span></div>
+    </section>
+    <section class="past-password" aria-label="Google Form password">
+      <div class="past-password-heading"><span class="past-lock">⌑</span><div><strong>Google Form Password</strong><p>If a form asks for a password, use this one.</p></div></div>
+      <div class="past-password-value"><code>myreservasi</code><button id="copyPastPassword" type="button">Copy Password</button></div>
+    </section>
+    <div class="past-section-heading"><div><span>YOUR PRACTICE LIBRARY</span><h3>Choose a Set</h3></div><span class="past-count">${PAST_SETS.length} Sets</span></div>
+    <div class="past-grid">${PAST_SETS.map(([num,name,url],i)=>`<a class="past-set" href="${esc(url)}" target="_blank" rel="noopener noreferrer" style="--past-i:${i%6}"><span class="past-set-top"><span class="past-set-number">SET ${String(num).padStart(2,'0')}</span><span class="past-external">↗</span></span><strong>${esc(name)}</strong><span class="past-set-foot">Start Practice <span>→</span></span></a>`).join("")}</div>
+    <p class="past-note">Sets 8 and 9 are not available yet. Google Forms open in a new tab.</p>
+  </main>${bottomNavHTML("home")}`;
 }
 
 function renderSets() {
@@ -1250,7 +1285,8 @@ function adminSettingsHTML() {
 
 /* ============ POST-RENDER ============ */
 function postRender() {
-  if($("retryCloud"))$("retryCloud").onclick=async()=>{const r=loadResult();if(!r)return;try{await saveResultToDb(r,r.attemptId);render();toast("Saved to cloud","ok");}catch(e){toast(e.message,"err");}};
+  if($('"copyPastPassword"')) $('"copyPastPassword"').onclick=async()=>{try{await navigator.clipboard.writeText("myreservasi");toast("Password copied","ok");}catch(e){const el=document.createElement("textarea");el.value="myreservasi";document.body.append(el);el.select();const ok=document.execCommand("copy");el.remove();toast(ok?"Password copied":"Please copy the password manually",ok?"ok":"err");}};
+  if($('"retryCloud"'))$("retryCloud").onclick=async()=>{const r=loadResult();if(!r)return;try{await saveResultToDb(r,r.attemptId);render();toast("Saved to cloud","ok");}catch(e){toast(e.message,"err");}};
   if($("pendingAdminButton"))$("pendingAdminButton").onclick=()=>{adminTab="requests";navigate("admin");};
   if($("retryContent"))$("retryContent").onclick=()=>loadDataInBackground();
   document.querySelectorAll("[data-go]").forEach(el => {
