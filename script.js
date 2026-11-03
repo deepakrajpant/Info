@@ -212,6 +212,10 @@ function loadPlansCache() {
   } catch { return null; }
 }
 
+function readLocalAttempts(uid){try{return JSON.parse(localStorage.getItem("dj_attempt_history_"+uid)||"[]");}catch{return [];}}
+function mergeAttempts(cloud,local){const map=new Map();for(const r of [...cloud,...local]){const id=r.attemptId||r.id;if(!map.has(id))map.set(id,r);}return [...map.values()].sort((a,b)=>resultTime(b)-resultTime(a));}
+function resultTime(r){const t=r.submittedAt;return t?.seconds?t.seconds*1000:Date.parse(t)||0;}
+function saveLocalAttempts(){if(!state.user)return;try{localStorage.setItem("dj_attempt_history_"+state.user.uid,JSON.stringify(state.results));}catch{toast("Browser storage is full; keep this result open until cloud saving completes.","warn");}}
 function saveResultsCache(uid, results) {
   try { localStorage.setItem(`${RESULTS_CACHE_KEY}_${uid}`, JSON.stringify({ ts: Date.now(), results })); } catch {}
 }
@@ -556,17 +560,17 @@ function recomputeTotals() {
 }
 async function loadResults(uid) {
   try {
-    const q = query(collection(db, "users", uid, "results"), orderBy("submittedAt", "desc"), limit(30));
+    const q = query(collection(db, "users", uid, "results"), orderBy("submittedAt", "desc"));
     const snap = await getDocs(q);
     const out = [];
     snap.forEach(d => out.push({ id: d.id, ...d.data() }));
-    saveResultsCache(uid, out);
-    return out;
-  } catch { return loadResultsCache(uid) || []; }
+    const merged=mergeAttempts(out,readLocalAttempts(uid));saveResultsCache(uid,merged);
+    return merged;
+  } catch { return mergeAttempts(loadResultsCache(uid)||[],readLocalAttempts(uid)); }
 }
 async function loadResultsCached(uid) {
   const cached = loadResultsCache(uid);
-  if (cached) return cached;
+  if (cached) return mergeAttempts(cached,readLocalAttempts(uid));
   return await loadResults(uid);
 }
 async function loadPlans() {
@@ -661,7 +665,7 @@ function render() {
   const s = state.screen;
   let html = "";
 
-  if (state.user && ["exam","practice","bookmarks","review"].includes(s) && !hasPremium()) {
+  if (state.user && ["exam","practice","bookmarks","review","past-sets"].includes(s) && !hasPremium()) {
     html=renderPremium();
   } else if (!state.user) {
     if (s === "signup") html = renderSignup();
@@ -815,7 +819,7 @@ Your Next Step Towards JFT Success.</p>
           <div><h4>Set ${r.setIdx} · ${esc(r.setName || "—")}</h4><p class="muted small">${fmtDate(r.submittedAt)}</p></div>
           <div style="text-align:right">
             <div style="font-size:18px;font-weight:900;color:${r.percentage >= 80 ? "var(--green)" : "var(--orange)"}">${r.percentage}%</div>
-            <div class="muted small">${r.score}/${r.maxScore}</div>
+            <div class="muted small">${Math.round(r.score)}/${r.maxScore}</div>
           </div>
         </div>`).join("") : `<p class="muted center" style="padding:24px 0">No attempts yet. Start your first exam!</p>`}
     </div>
@@ -837,6 +841,7 @@ const PAST_SETS = [
   [12,"CHICHI","https://forms.gle/QS72Eu13JQvZPhdm9"]
 ];
 function renderPastSets() {
+  if(!hasPremium()){setTimeout(()=>navigate("premium"),0);return renderPremium();}
   return `${topbarHTML()}<main class="wrap past-page">
     <button class="past-back" data-go="home" type="button">← &nbsp; Back to Home</button>
     <section class="past-hero"><div class="past-hero-glow"></div>
@@ -883,6 +888,33 @@ function renderSets() {
   </div>${bottomNavHTML("sets")}`;
 }
 
+
+function passageHTML(value){
+ const template=document.createElement("template");template.innerHTML=String(value||"");
+ const tags=new Set("P BR DIV SPAN B STRONG I EM U S MARK SMALL SUB SUP RUBY RT RP UL OL LI BLOCKQUOTE TABLE THEAD TBODY TR TH TD H3 H4 FONT".split(" "));
+ const properties=new Set(["color","background-color","font-weight","font-style","text-decoration","text-decoration-line","text-align","font-size"]);
+ function clean(parent){for(const node of [...parent.childNodes]){
+  if(node.nodeType===8){node.remove();continue;}if(node.nodeType!==1)continue;
+  if(["SCRIPT","STYLE","IFRAME","OBJECT","EMBED","SVG","MATH","TEMPLATE"].includes(node.tagName)){node.remove();continue;}
+  clean(node);
+  if(!tags.has(node.tagName)){node.replaceWith(...node.childNodes);continue;}
+  const styles=[];for(const property of properties){const v=node.style.getPropertyValue(property);if(v && !/url|expression|var\(/i.test(v) && (property!=="font-size" || /^(?:\d{1,2}(?:\.\d+)?(?:px|pt)|[12](?:\.\d+)?em|small|medium|large)$/.test(v)))styles.push([property,v]);}
+  const color=node.tagName==="FONT"?node.getAttribute("color"):null;
+  for(const a of [...node.attributes])node.removeAttribute(a.name);
+  for(const [property,v] of styles)node.style.setProperty(property,v);
+  if(color && CSS.supports("color",color))node.style.color=color;
+ }}clean(template.content);return template.innerHTML;
+}
+function questionActions(){return `<div class="question-actions"><button type="button" class="question-tool" data-report>⚑ Report</button><button type="button" class="question-tool" data-bookmark="current">Bookmark</button></div>`;}
+function showPreparing(title,detail){modal(title,`<div class="preparing-panel" role="status" aria-live="polite"><div class="prep-orbit"><span>DJ</span></div><p>${esc(detail)}</p><div class="prep-track"><i></i></div><small>Please wait a moment</small></div>`,[]);}
+function sectionPercent(section){const items=section.items||[];return items.length?Math.round(items.filter(it=>it.yourAns!=null&&it.yourAns===it.correctAns).length/items.length*100):0;}
+function attemptHistory(set){
+ const attempts=state.results.filter(r=>Number(r.setIdx)===set.idx);
+ if(!attempts.length)return "";
+ const latest=attempts[0];
+ return `<section class="attempt-summary card mt-2"><div class="flex-between"><div><span class="muted small">YOUR PROGRESS</span><h3>Previous attempt</h3></div><span class="badge badge-info">${attempts.length} attempt${attempts.length===1?"":"s"}</span></div><div class="attempt-score"><b>${Math.round(latest.score)}<small> / 250</small></b><span>${Number(latest.percentage)}% · ${fmtDate(latest.submittedAt)}</span></div><div class="result-stats"><div><h4>Correct</h4><p class="g">${latest.correct}</p></div><div><h4>Wrong</h4><p class="r">${latest.wrong}</p></div><div><h4>Skipped</h4><p>${latest.unanswered}</p></div><div><h4>Best</h4><p>${Math.round(Math.max(...attempts.map(a=>a.score)))}</p></div></div><div class="attempt-reviews">${["all","correct","wrong"].map(f=>`<button class="btn btn-ghost btn-sm" data-attempt="${esc(latest.attemptId||latest.id)}" data-attempt-filter="${f}">${f==="all"?"Review all":f==="correct"?"Right answers":"Wrong answers"}</button>`).join("")}</div><p class="muted small mt-1">${attempts.length>1?"Recent attempts below · ":""}Practice again to improve your score.</p>${attempts.slice(1).map(r=>`<button class="attempt-row" data-attempt="${esc(r.attemptId||r.id)}" data-attempt-filter="all"><span>${fmtDate(r.submittedAt)}</span><b>${Math.round(r.score)} / 250</b><span>Review →</span></button>`).join("")}</section>`;
+}
+
 function renderStart() {
   const setIdx = +state.params.set || 0;
   const set = state.sets[setIdx];
@@ -922,7 +954,8 @@ function renderStart() {
         <div class="center" style="background:var(--bg);border-radius:12px;padding:14px">
           <div style="font-size:22px;font-weight:900">${state.passMarks}</div><div class="muted small">Pass Mark</div></div>
       </div>
-      <h3 class="mb-1">Exam Rules</h3>
+      ${attemptHistory(set)}
+      <h3 class="mb-1 mt-2">Exam Rules</h3>
       <ol class="muted mb-3" style="padding-left:18px;font-size:12.5px;line-height:1.7">
         <li>Once you finish a section you cannot return to it</li>
         <li>Timer auto-submits the exam at 00:00</li>
@@ -935,7 +968,7 @@ function renderStart() {
         <input type="checkbox" id="agree" style="width:18px;height:18px;accent-color:var(--purple)">
         <span style="font-size:12.5px;font-weight:600">I understand the rules and am ready</span>
       </label>
-      <button class="btn btn-primary btn-block mt-2" id="startBtn" disabled>START EXAM</button>
+      <button class="btn btn-primary btn-block mt-2" id="startBtn" disabled>${state.results.some(r=>Number(r.setIdx)===set.idx)?"RETAKE EXAM":"START EXAM"}</button>
     </div>
   </div>`;
 }
@@ -988,10 +1021,10 @@ function renderExam() {
         <span class="q-num">Q ${ex.qi + 1} of ${sec.questions.length}</span>
         <span class="q-tag">${esc(sec.short)}</span>
       </div>
-      ${q.p ? `<div class="passage">${esc(q.p)}</div>` : ""}
-      <div class="q-text">${esc(q.q)}</div><button class="bookmark-btn" data-bookmark="current">Save question</button>
+      <div class="q-text">${esc(q.q)}</div>
+      ${q.p ? `<div class="passage">${passageHTML(q.p)}</div>` : ""}
       ${mediaHTML}
-      <div class="opts" id="opts">${optsHTML}</div>
+      <div class="opts" id="opts">${optsHTML}</div>${questionActions()}
     </div>
     <div class="exam-nav">
       <button class="btn btn-ghost" id="prevBtn" ${ex.qi === 0 ? "disabled" : ""}>← Previous</button>
@@ -1016,9 +1049,9 @@ function renderResult() {
           <circle class="fg" id="resultRing" cx="80" cy="80" r="68" stroke-dasharray="427.3" stroke-dashoffset="427.3"
             stroke="${pass ? "var(--green)" : "var(--red)"}"/>
         </svg>
-        <div><b>${r.score}</b><span>/ ${r.maxScore}</span></div>
+        <div><b>${Math.round(r.score)}</b><span>/ ${r.maxScore}</span></div>
       </div>
-      <div class="grade-text">${pass ? (pct >= 95 ? " Outstanding!" : " Passed — well done!") : ` Need ${state.passMarks - r.score} more marks to pass`}</div>
+      <div class="grade-text">${pass ? (pct >= 95 ? " Outstanding!" : " Passed — well done!") : ` Need ${Math.max(0,state.passMarks - Math.round(r.score))} more marks to pass`}</div>
       <div class="result-stats">
         <div><h4>Correct</h4><p class="g">${r.correct}</p></div>
         <div><h4>Wrong</h4><p class="r">${r.wrong}</p></div>
@@ -1026,14 +1059,14 @@ function renderResult() {
         <div><h4>Percent</h4><p>${pct}%</p></div>
       </div>
     </div>
-    <div class="card mt-2">
-      <h3 class="mb-2">Section Breakdown</h3>
-      ${r.sections.map(s => `
-        <div class="flex-between" style="padding:10px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:12px;font-weight:800">${esc(s.name)}</div>
-          <div style="font-size:12px;font-weight:900;color:var(--purple)">${s.score} / ${s.max}</div>
-        </div>`).join("")}
-    </div>
+    <section class="card jft-result mt-2">
+      <div class="jft-heading"><div><small>総合得点 · Total Score</small><strong>${Math.round(r.score)} <small>/ 250</small></strong></div><div><small>判定結果 · Assessment</small><strong>${pass?"A2 practice target":"Below A2 practice target"}</strong></div></div>
+      <p class="muted small">Dream Japan practice estimate · Target: ${state.passMarks}/250</p>
+      <div class="jft-score-track"><i style="left:${Math.min(100,Math.max(0,r.score/250*100))}%"><span>${Math.round(r.score)}</span></i><b class="jft-target" style="left:80%"></b></div><div class="flex-between small"><span>0</span><span>200 target</span><span>250</span></div>
+      <h3 class="mt-3">セクション毎の正答率</h3><p class="muted small">The percentage of correct answers for each section</p>
+      ${r.sections.map(s=>`<div class="jft-section"><span>${esc(s.name)}</span><div class="section-track"><i style="left:${sectionPercent(s)}%"><b>${sectionPercent(s)}%</b></i></div></div>`).join("")}
+      <p class="muted small mt-2">Practice results are calculated from this mock test. They are not an official JFT scaled score or certification.</p>
+    </section>
     <div class="grid-2 mt-2">
       <button class="btn btn-ghost" data-review="all">All Answers</button>
       <button class="btn btn-ghost" data-review="wrong">Wrong Only</button>
@@ -1054,20 +1087,21 @@ function renderReview() {
       <h2>Answer Review</h2>
       <div class="flex" style="gap:6px">
         <button class="btn btn-sm ${filter === "all" ? "btn-primary" : "btn-ghost"}" data-review="all">All</button>
+        <button class="btn btn-sm ${filter === "correct" ? "btn-primary" : "btn-ghost"}" data-review="correct">Right</button>
         <button class="btn btn-sm ${filter === "wrong" ? "btn-primary" : "btn-ghost"}" data-review="wrong">Wrong</button>
       </div>
     </div>
     ${r.sections.map(s => {
-      const items = s.items.filter(it => filter === "all" || it.yourAns !== it.correctAns);
+      const items = s.items.filter(it => filter === "all" || (filter === "correct" ? it.yourAns != null && it.yourAns === it.correctAns : it.yourAns !== it.correctAns));
       if (!items.length) return "";
       return `<h3 class="mt-2 mb-1" style="color:var(--purple);font-size:12px;letter-spacing:.8px;text-transform:uppercase">${esc(s.name)}</h3>
         ${items.map(it => `
           <div class="card q-card mb-1" style="border-left:4px solid ${it.yourAns === it.correctAns ? "var(--green)" : "var(--red)"}">
             <div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:6px">Q${it.idx + 1}${it.yourAns == null ? " · not answered" : ""}</div>
-            ${it.p ? `<div class="passage" style="font-size:13px;padding:10px;margin-bottom:8px">${esc(it.p)}</div>` : ""}
+            <div class="q-text">${esc(it.q)}</div>${it.p ? `<div class="passage">${passageHTML(it.p)}</div>` : ""}
             ${it.img ? `<img src="${esc(it.img)}" loading="lazy" style="width:100%;border-radius:10px;margin-bottom:8px" onerror="this.style.display='none'">` : ""}
             ${it.au && !it.au.startsWith("tts:") ? `<audio controls preload="none" src="${esc(resolveUrl(it.au))}"></audio>` : ""}
-            <div style="font-size:13.5px;line-height:1.5;margin-bottom:8px;white-space:pre-line">${esc(it.q)}</div>
+            
             ${it.o.map((txt, i) => {
               if (i === 3 && !txt) return "";
               const isC = i === it.correctAns, isY = i === it.yourAns;
@@ -1285,8 +1319,9 @@ function adminSettingsHTML() {
 
 /* ============ POST-RENDER ============ */
 function postRender() {
-  if($('"copyPastPassword"')) $('"copyPastPassword"').onclick=async()=>{try{await navigator.clipboard.writeText("myreservasi");toast("Password copied","ok");}catch(e){const el=document.createElement("textarea");el.value="myreservasi";document.body.append(el);el.select();const ok=document.execCommand("copy");el.remove();toast(ok?"Password copied":"Please copy the password manually",ok?"ok":"err");}};
-  if($('"retryCloud"'))$("retryCloud").onclick=async()=>{const r=loadResult();if(!r)return;try{await saveResultToDb(r,r.attemptId);render();toast("Saved to cloud","ok");}catch(e){toast(e.message,"err");}};
+  document.querySelectorAll("[data-attempt]").forEach(b=>b.onclick=()=>{const r=state.results.find(r=>(r.attemptId||r.id)===b.dataset.attempt);if(r){saveResult(r);navigate("review",{filter:b.dataset.attemptFilter||"all"});}});
+  if($("copyPastPassword")) $("copyPastPassword").onclick=async()=>{try{await navigator.clipboard.writeText("myreservasi");toast("Password copied","ok");}catch(e){const el=document.createElement("textarea");el.value="myreservasi";document.body.append(el);el.select();const ok=document.execCommand("copy");el.remove();toast(ok?"Password copied":"Please copy the password manually",ok?"ok":"err");}};
+  if($("retryCloud"))$("retryCloud").onclick=async()=>{const r=loadResult();if(!r)return;try{await saveResultToDb(r,r.attemptId);render();toast("Saved to cloud","ok");}catch(e){toast(e.message,"err");}};
   if($("pendingAdminButton"))$("pendingAdminButton").onclick=()=>{adminTab="requests";navigate("admin");};
   if($("retryContent"))$("retryContent").onclick=()=>loadDataInBackground();
   document.querySelectorAll("[data-go]").forEach(el => {
@@ -1396,14 +1431,14 @@ function postRender() {
 async function beginExam(setIdx, force = false) {
  return onceJob("beginExam",async()=>{
   if(!hasPremium())return navigate("premium");
-  toast("Preparing your exam…");
+  showPreparing("Preparing your exam", "Getting your questions ready…");
   const prepared=await safeAction("startAttempt",{setIdx:setIdx+1});
-  if(!prepared) return;
+  if(!prepared){closeModal();return;}
   const set=buildSets(prepared.questions)[setIdx];
-  if (!set || !set.sections.some(s=>s.questions.length)) return toast("This set has no questions","err");
+  if (!set || !set.sections.some(s=>s.questions.length)) {closeModal();return toast("This set has no questions","err");}
   if(!await preloadMedia(set.sections.flatMap(s=>s.questions))) return;
   const activated=await safeAction("activateAttempt",{attemptId:prepared.attemptId});
-  if(!activated)return;
+  if(!activated){closeModal();return;}
   state._attemptId=prepared.attemptId;
   state._attemptStartedAt=activated.startedAt;
   state.sets[setIdx]=structuredClone(set);
@@ -1429,6 +1464,7 @@ async function beginExam(setIdx, force = false) {
   saveExamState(state.exam);
   startTimer();
   bumpStreak();
+  closeModal();
   navigate("exam");
  });
 }
@@ -1613,7 +1649,9 @@ async function finishExam() {
   const ex = state.exam;
   if (!ex || state._submitting) return;
   state._submitting=true;
-  const used = Math.round(EXAM_MIN * 60 - ex.left);
+  showPreparing("Preparing your result", "Calculating your score and section performance…");
+  await new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));
+  const used = Math.min(EXAM_MIN*60,Math.max(0,Math.round(EXAM_MIN * 60 - ex.left)));
 
   let score = 0, correct = 0, unanswered = 0;
   const sections = ex.sections.map(s => {
@@ -1634,12 +1672,12 @@ async function finishExam() {
   const totalQ=ex.sections.reduce((n,s)=>n+s.questions.length,0);
   const originalFullMarks=ex.sections.reduce((n,s)=>n+s.questions.length*s.marks,0);
   sections.forEach(s=>{s.score=+(s.score*250/originalFullMarks).toFixed(2);s.max=+(s.max*250/originalFullMarks).toFixed(2);});
-  score=+(score*250/originalFullMarks).toFixed(2);
+  score=Math.round(score*250/originalFullMarks);
   const wrong = totalQ - correct - unanswered;
   const percentage = Math.round(score / state.fullMarks * 100);
   const attemptId = `attempt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const result = {
-    cloudSaved:false, attemptId:ex.attemptId, answers:ex.sections.map(s=>({key:s.key,answers:s.questions.map(q=>q.sel??null)})),
+    cloudSaved:false, attemptId:ex.attemptId||attemptId, answers:ex.sections.map(s=>({key:s.key,answers:s.questions.map(q=>q.sel??null)})),
     setIdx: ex.set.idx, setName: ex.set.name,
     score, maxScore: state.fullMarks, percentage,
     correct, wrong, unanswered, sections, timeUsed: used,
@@ -1648,6 +1686,8 @@ async function finishExam() {
   };
 
   saveResult(result);
+  state.results.unshift({...result,id:result.attemptId});
+  saveLocalAttempts();
   clearExamState();
   invalidateResultsCache(state.user.uid);   // force re-fetch next visit
 
@@ -1656,33 +1696,16 @@ async function finishExam() {
   state.exam = null;
   releaseExamLock(setIdx);
 
-  try {
-    await saveResultToDb(result, attemptId);
-    replaceNavigate("result");
-  } catch (e) {
-    console.error("Save result", e);
-    modal("Could not save to cloud",
-      "Your result is saved on this device. Reconnect and retry to add it to your history.",
-      [
-        { label: "Continue Offline", cls: "btn-ghost", onClick: () => replaceNavigate("result") },
-        { label: "Retry Upload", cls: "btn-primary", onClick: async () => {
-          try {
-            await saveResultToDb(result, attemptId);
-            toast("Uploaded ", "ok");
-            replaceNavigate("result");
-          } catch (e2) {
-            toast("Still offline — result kept locally", "err");
-            replaceNavigate("result");
-          }
-        }}
-      ]);
-  }
+  closeModal();
+  replaceNavigate("result");
+  saveResultToDb(result, attemptId).then(()=>{if(state.screen==="result" && loadResult()?.attemptId===result.attemptId)render();}).catch(error=>{console.warn("Result kept on this browser",error);if(state.screen==="result")toast("Result saved on this browser. Cloud save is pending.");});
 }
 
 async function saveResultToDb(result,attemptId) {
  const uid=requireSession();await checkFreeAccess();
  const id=result.attemptId||attemptId||uuid();
- const clean=JSON.parse(JSON.stringify({...result,attemptId:id,cloudSaved:true,scoreSource:"browser"}));
+ const {id:ignoredId,...payload}=result;
+ const clean=JSON.parse(JSON.stringify({...payload,attemptId:id,cloudSaved:true,scoreSource:"browser"}));
  const resultRef=doc(db,"users",uid,"results",id),userRef=doc(db,"users",uid),leaderRef=doc(db,"leaderboard",uid);
  await runTransaction(db,async tx=>{
   const [previous,u,lb]=await Promise.all([tx.get(resultRef),tx.get(userRef),tx.get(leaderRef)]);
@@ -1694,9 +1717,9 @@ async function saveResultToDb(result,attemptId) {
   tx.set(leaderRef,{name:String(u.data().name||"Student").slice(0,80),bestScore:best,streak:Number(u.data().streak?.count)||0,latestAttempt:id,updatedAt:serverTimestamp(),scoreSource:"browser"});
   if(best>(Number(u.data().bestScore)||0))tx.update(userRef,{bestScore:best});
  });
- Object.assign(result,{attemptId:id,cloudSaved:true,scoreSource:"browser"});saveResult(result);
- if(!state.results.some(r=>r.id===id))state.results.unshift({...result,id});
- invalidateResultsCache(uid);state.leaderboard=await loadLeaderboard();
+ Object.assign(result,{attemptId:id,cloudSaved:true,scoreSource:"browser"});if(loadResult()?.attemptId===id)saveResult(result);
+ const at=state.results.findIndex(r=>(r.attemptId||r.id)===id);if(at<0)state.results.unshift({...result,id});else state.results[at]={...result,id};saveLocalAttempts();
+ invalidateResultsCache(uid);void loadLeaderboard().then(rows=>state.leaderboard=rows).catch(()=>{});
 }
 
 function stopAudio() {
@@ -1787,10 +1810,10 @@ function renderPracticeScreen() {
           <span class="q-num">Q ${pr.qi + 1} of ${sec.questions.length}</span>
           <span class="q-tag">${esc(sec.short)}</span>
         </div>
-        ${q.p ? `<div class="passage">${esc(q.p)}</div>` : ""}
-        <div class="q-text">${esc(q.q)}</div><button class="bookmark-btn" data-bookmark="current">Save question</button>
+        <div class="q-text">${esc(q.q)}</div>
+        ${q.p ? `<div class="passage">${passageHTML(q.p)}</div>` : ""}
         ${mediaHTML}
-        <div class="opts">${optsHTML}</div>
+        <div class="opts">${optsHTML}</div>${questionActions()}
       </div>
       <div class="exam-nav">
         <button class="btn btn-ghost" id="prevBtn" ${pr.qi === 0 ? "disabled" : ""}>← Previous</button>
@@ -1852,7 +1875,7 @@ async function shareResult() {
   const r = loadResult();
   if (!r) return;
   const pass = r.score >= state.passMarks;
-  const text = ` I scored ${r.score}/${r.maxScore} (${r.percentage}%) on Dream Japan JFT Mock Test!\nSet ${r.setIdx} · ${r.setName}\n${pass ? " PASSED" : " Practicing hard"}\n#JFT #DreamJapan`;
+  const text = ` I scored ${Math.round(r.score)}/${r.maxScore} (${r.percentage}%) on Dream Japan JFT Mock Test!\nSet ${r.setIdx} · ${r.setName}\n${pass ? " PASSED" : " Practicing hard"}\n#JFT #DreamJapan`;
   if (navigator.share) {
     try { await navigator.share({ title: "Dream Japan JFT Result", text }); return; } catch {}
   }
@@ -2051,7 +2074,7 @@ function openQEditor(rowOrNull) {
           `<option value="${s.key}" ${r.section === s.key ? "selected" : ""}>${s.name}</option>`).join("")}</select></div>
     </div>
     <div class="field"><label>Question</label><textarea id="qeQ" class="input">${esc(r.question)}</textarea></div>
-    <div class="field"><label>Passage (optional)</label><textarea id="qeP" class="input">${esc(r.passage || "")}</textarea></div>
+    <div class="field"><label>Passage (optional · HTML supported)</label><textarea id="qeP" class="input">${esc(r.passage || "")}</textarea></div>
     <div class="field"><label>Image</label><input type="text" id="qeImg" class="input" value="${esc(r.image || "")}" placeholder="photos/q1.jpg"></div>
     <div class="field"><label>Audio</label><input type="text" id="qeAu" class="input" value="${esc(r.audio || "")}" placeholder="audio/q1.mp3"></div>
     <div class="field"><label>Correct</label>
@@ -2230,7 +2253,7 @@ async function loadDataInBackground() {
   (async()=>{state.leaderboard=await loadLeaderboard();})(),
   (async()=>{if(hasPremium()){try{const qr=await loadQuestions();state.sets=buildSets(qr.rows);state.contentError=null;recomputeTotals();}catch(e){state.contentError=e.message;state.sets=[];}}})()
  ]);
- if(state.user && ["home","profile","sets","premium","bookmarks","leaderboard"].includes(state.screen)) render();
+ if(state.user && ["home","profile","sets","start","premium","bookmarks","leaderboard"].includes(state.screen)) render();
  updateInstallBanner();setupAdminNotifications();
  });
 }
@@ -2453,28 +2476,61 @@ async function authorizeContent(){
  return true;
 }
 function audioClock(sec){return Number.isFinite(sec)?`${pad(Math.floor(sec/60))}:${pad(Math.floor(sec%60))}`:"00:00";}
-function mediaMarkup(q){return `<div class="media fixed-media">${q.img?`<div class="image-slot"><img src="${esc(q.img)}" alt="Question illustration" decoding="async" fetchpriority="high" data-question-img><span class="image-error" hidden>Image unavailable</span></div>`:""}${q.au?`<div class="audio-row" id="audRow"><button class="play-btn" id="playBtn" aria-label="Play or pause audio">Play</button><div class="audio-details"><span id="audioTime">00:00 / 00:00</span><progress id="audioProgress" value="0" max="100" aria-label="Audio progress"></progress><small id="audioLeft">${state.practice?"Unlimited practice":Math.max(0,MAX_PLAYS-(q.played||0))+" plays left"}</small></div></div>`:""}</div>`;}
-function previewMedia(q){return `${q.img?`<div class="image-slot"><img src="${esc(q.img)}" alt="Question illustration" loading="lazy" data-question-img><span class="image-error" hidden>Image unavailable</span></div>`:""}${q.au? q.au.startsWith("tts:")?"<p>Japanese speech audio</p>":`<audio controls preload="none" src="${esc(resolveUrl(q.au))}"></audio>`:""}`;}
+function mediaMarkup(q){return `<div class="media fixed-media">${q.img?`<div class="image-slot"><img src="${esc(resolveUrl(q.img))}" alt="Question illustration" decoding="async" fetchpriority="high" data-question-img><span class="image-error" hidden>Image unavailable</span><button type="button" class="image-zoom" aria-label="Zoom in image" data-image-zoom>⊕</button></div>`:""}${q.au?`<div class="audio-row" id="audRow"><button class="play-btn" id="playBtn" aria-label="Play or pause audio">Play</button><div class="audio-details"><span id="audioTime">00:00 / 00:00</span><progress id="audioProgress" value="0" max="100" aria-label="Audio progress"></progress><small id="audioLeft">${state.practice?"Unlimited practice":Math.max(0,MAX_PLAYS-(q.played||0))+" plays left"}</small></div></div>`:""}</div>`;}
+function previewMedia(q){return `${q.img?`<div class="image-slot"><img src="${esc(resolveUrl(q.img))}" alt="Question illustration" loading="lazy" data-question-img><span class="image-error" hidden>Image unavailable</span><button type="button" class="image-zoom" aria-label="Zoom in image" data-image-zoom>⊕</button></div>`:""}${q.au? q.au.startsWith("tts:")?"<p>Japanese speech audio</p>":`<audio controls preload="none" src="${esc(resolveUrl(q.au))}"></audio>`:""}`;}
 function bindMedia(){
+ prefetchUpcoming();
+ document.querySelectorAll("[data-image-zoom]").forEach(b=>b.onclick=()=>{const img=b.parentElement.querySelector("img");if(img?.naturalWidth)openImageZoom(img.src);});
+ document.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>{
+ const ex=state.practice||state.exam,sec=ex?.sections[ex.si],q=sec?.questions[ex.qi];if(!q)return;
+ modal("Report this question",`<p>Set ${q.set} · ${esc(sec.name)} · Q${ex.qi+1}</p><textarea id="reportReason" class="input" maxlength="1000" placeholder="Describe the issue with this question"></textarea><p class="muted small">Copy your report or open WhatsApp to review and send it to the admin.</p>`,[{label:"Close",cls:"btn-ghost"},{label:"Copy report",keepOpen:true,onClick:()=>copyText(reportText())},{label:"Open WhatsApp",keepOpen:true,onClick:()=>{const number=String(appConfig.whatsappNumber||"").replace(/\D/g,"");if(!number)return toast("Admin contact is unavailable. Copy your report instead.","warn");window.open(`https://wa.me/${number}?text=${encodeURIComponent(reportText())}`,"_blank","noopener,noreferrer");}}]);
+ function reportText(){return `Dream Japan question report\nSet ${q.set} · ${sec.name} · Q${ex.qi+1}\nID: ${q.id||""}\n${q.q}\nIssue: ${$("reportReason")?.value||""}`;}
+ });
  document.querySelectorAll("[data-question-img]").forEach(img=>{img.onerror=()=>{img.style.visibility="hidden";const e=img.parentElement.querySelector(".image-error");if(e)e.hidden=false;};});
  document.querySelectorAll("[data-bookmark]").forEach(b=>{
   const ex=state.practice||state.exam, sec=ex?.sections[ex.si], q=sec?.questions[ex.qi];
   if(!q)return;
   const qi=state.sets[q.set-1]?.sections.find(s=>s.key===q.section)?.questions.findIndex(v=>v.id===q.id);
   const selected=(state.profile?.bookmarks||[]).some(v=>q.id?v.id===q.id:v.set===q.set&&v.section===q.section&&v.qi===qi);
-  b.textContent=selected?"Saved question":"Save question";b.setAttribute("aria-pressed",String(selected));
+  b.textContent=selected?"▣ Bookmarked":"▢ Bookmark";b.setAttribute("aria-pressed",String(selected));
   b.onclick=async()=>{await toggleBookmark(q.set,q.section,qi);bindMedia();};
  });
 }
+
+const mediaJobs=new Map(),heldMedia=new Map();
+function warmAsset(source,isAudio=false,priority="low"){
+ const url=resolveUrl(source);if(!url||/^(tts:|scene:)/.test(url))return Promise.resolve(true);
+ if(Date.now()-(warmMedia.get(url)||0)<300000)return Promise.resolve(true);
+ if(mediaJobs.has(url))return mediaJobs.get(url);
+ const job=new Promise(resolve=>{
+  const el=isAudio?new Audio():new Image();heldMedia.set(url,el);
+  let done=false;
+  const finish=ok=>{if(done)return;done=true;clearTimeout(timer);el.onload=el.onerror=el.oncanplaythrough=el.onloadeddata=null;if(ok)warmMedia.set(url,Date.now());else heldMedia.delete(url);resolve(ok);};
+  const timer=setTimeout(()=>finish(false),10000);
+  el.onerror=()=>finish(false);
+  if(isAudio){el.preload="auto";el.oncanplaythrough=el.onloadeddata=()=>finish(true);}
+  else {el.decoding="async";el.fetchPriority=priority;el.onload=()=>finish(true);}
+  el.src=url;if(isAudio)el.load();
+ });mediaJobs.set(url,job);job.finally(()=>mediaJobs.delete(url));return job;
+}
+function warmQuestion(q,priority="low"){return Promise.all([warmAsset(q.img,false,priority),warmAsset(q.au,true,priority)]);}
+function prefetchUpcoming(){
+ const ex=state.practice||state.exam;if(!ex)return;
+ const upcoming=ex.sections.flatMap((s,i)=>i<ex.si?[]:i===ex.si?s.questions.slice(ex.qi+1):s.questions).slice(0,3);
+ upcoming.forEach(q=>void warmQuestion(q));
+}
 async function preloadMedia(questions){
- const urls=[...new Set(questions.flatMap(q=>[q.img,q.au&&!/^(tts:|scene:)/.test(q.au)?resolveUrl(q.au):null]).filter(Boolean))].filter(url=>Date.now()-(warmMedia.get(url)||0)>300000);
- if(!urls.length)return true;
- modal("Preparing your test",`<p>Loading images and audio before the timer begins.</p><progress id="preloadProgress" max="${urls.length}" value="0"></progress><p id="preloadText">0 / ${urls.length}</p>`,[]);
- let cursor=0,complete=0;const failed=[];
- await Promise.all(Array.from({length:Math.min(5,urls.length)},async()=>{while(cursor<urls.length){const url=urls[cursor++];const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),25000);try{const r=await fetch(url,{signal:ctrl.signal,cache:"force-cache"});if(!r.ok)throw new Error("Media missing");await r.blob();warmMedia.set(url,Date.now());}catch{failed.push(url);}finally{clearTimeout(timer);complete++;if($("preloadProgress"))$("preloadProgress").value=complete;if($("preloadText"))$("preloadText").textContent=`${complete} / ${urls.length}`;}}}));
- closeModal();
- if(!failed.length)return true;
- return await new Promise(resolve=>modal("Some media could not load",`<p>${failed.length} media files failed. Retry before beginning if you need listening or image questions.</p>`,[{label:"Cancel",cls:"btn-ghost",onClick:()=>resolve(false)},{label:"Retry",onClick:async()=>resolve(await preloadMedia(questions))},{label:"Continue",cls:"btn-ghost",onClick:()=>resolve(true)}]));
+ showPreparing("Preparing your exam", "Preparing questions, images and listening audio…");
+ const first=questions.slice(0,3);
+ await Promise.race([Promise.all(first.map(q=>warmQuestion(q,"high"))),new Promise(resolve=>setTimeout(resolve,3500))]);
+ // Keep the first screen responsive. Remaining assets are warmed as each question opens.
+ closeModal();return true;
+}
+function openImageZoom(src){
+ const dialog=document.createElement("dialog");dialog.className="image-viewer";
+ dialog.innerHTML=`<div class="zoom-toolbar"><button type="button" data-scale aria-label="Zoom in">⊕</button><button type="button" data-close aria-label="Zoom out and close">⊖ Close</button></div><div class="zoom-scroll"><img src="${esc(src)}" alt="Enlarged question image"></div>`;
+ document.body.append(dialog);let large=false;const button=dialog.querySelector("[data-scale]");button.onclick=()=>{large=!large;dialog.classList.toggle("magnified",large);button.textContent=large?"⊖":"⊕";button.setAttribute("aria-label",large?"Zoom out":"Zoom in");};
+ dialog.querySelector("[data-close]").onclick=()=>dialog.close();dialog.onclose=()=>dialog.remove();dialog.showModal();
 }
 async function copyText(value){try{await navigator.clipboard.writeText(value);toast("Copied","ok");}catch{modal("Copy this value",`<input class="input" readonly value="${esc(value)}" onclick="this.select()">`);}}
 async function openPayment(planId){
@@ -2499,7 +2555,7 @@ async function openPayment(planId){
  }}]);
  $("copyEsewa").onclick=()=>copyText(appConfig.esewaNumber||"");$("copyEmail").onclick=()=>copyText(email);
 }
-function questionPreview(row){const q=buildSets([row])[row.set-1]?.sections.find(s=>s.key===row.section)?.questions[0];if(!q)return "Invalid question";return `<article class="q-card"><p class="muted">Set ${row.set} · ${esc(row.section)}</p>${q.p?`<div class="passage">${esc(q.p)}</div>`:""}<div class="q-text">${esc(q.q)}</div>${previewMedia(q)}<div class="opts">${q.o.map((v,i)=>v?`<div class="opt ${i===q.a?"sel":""}"><div class="opt-ltr">${"ABCD"[i]}</div><div class="opt-tx">${esc(v)}</div></div>`:"").join("")}</div><p class="muted small">Admin answer: ${esc(row.answer)}</p></article>`;}
+function questionPreview(row){const q=buildSets([row])[row.set-1]?.sections.find(s=>s.key===row.section)?.questions[0];if(!q)return "Invalid question";return `<article class="q-card"><p class="muted">Set ${row.set} · ${esc(row.section)}</p><div class="q-text">${esc(q.q)}</div>${q.p?`<div class="passage">${passageHTML(q.p)}</div>`:""}${previewMedia(q)}<div class="opts">${q.o.map((v,i)=>v?`<div class="opt ${i===q.a?"sel":""}"><div class="opt-ltr">${"ABCD"[i]}</div><div class="opt-tx">${esc(v)}</div></div>`:"").join("")}</div><p class="muted small">Admin answer: ${esc(row.answer)}</p></article>`;}
 function previewSet(){const rows=state._visibleQs||[];if(!rows.length)return toast("No questions to preview","warn");modal("Set preview",rows.map(questionPreview).join(""));bindMedia();}
 async function mutateQuestions(transform){
  if(!state.isAdmin)throw new Error("Admin required");
