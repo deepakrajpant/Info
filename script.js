@@ -1,6 +1,6 @@
 /* ============================================================
    Dream Japan — JFT Mock Test (3-file SPA)
-   v4.1.0 — faster button feedback, deduplicated reads, compact exam checkpoints
+   v4.4.0 — latest results, average leaderboard, and admin question reports
    ============================================================ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -10,7 +10,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc,
-  collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy, limit, runTransaction, deleteDoc
+  collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy, limit, runTransaction, deleteDoc, writeBatch, getCountFromServer, getAggregateFromServer, sum
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
@@ -213,8 +213,29 @@ function loadPlansCache() {
 }
 
 function readLocalAttempts(uid){try{return JSON.parse(localStorage.getItem("dj_attempt_history_"+uid)||"[]");}catch{return [];}}
-function mergeAttempts(cloud,local){const map=new Map();for(const r of [...cloud,...local]){const id=r.attemptId||r.id;if(!map.has(id))map.set(id,r);}return [...map.values()].sort((a,b)=>resultTime(b)-resultTime(a));}
-function resultTime(r){const t=r.submittedAt;return t?.seconds?t.seconds*1000:Date.parse(t)||0;}
+
+function resultTime(result) {
+  return membershipUntil(result.submittedAt) || 0;
+}
+
+function latestBySet(rows) {
+  const sets = new Map();
+  const seen = new Set();
+  for (const row of [...rows].sort((a, b) => resultTime(b) - resultTime(a))) {
+    const setIdx = Number(row.setIdx);
+    if (!Number.isInteger(setIdx) || setIdx < 1 || setIdx > SET_NAMES.length) continue;
+    const id = row.attemptId || row.id;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const group = sets.get(setIdx);
+    if (!group) sets.set(setIdx, { latest: row, legacy: row.attemptCount ? 0 : 1, count: row.attemptCount || 0 });
+    else if (row.attemptCount) group.count = Math.max(group.count, row.attemptCount);
+    else group.legacy++;
+  }
+  return [...sets.values()].map(({ latest, legacy, count }) => ({
+    ...latest, attemptCount: Math.max(legacy, count)
+  }));
+}
 function saveLocalAttempts(){if(!state.user)return;try{localStorage.setItem("dj_attempt_history_"+state.user.uid,JSON.stringify(state.results));}catch{toast("Browser storage is full; keep this result open until cloud saving completes.","warn");}}
 function saveResultsCache(uid, results) {
   try { localStorage.setItem(`${RESULTS_CACHE_KEY}_${uid}`, JSON.stringify({ ts: Date.now(), results })); } catch {}
@@ -558,20 +579,73 @@ function recomputeTotals() {
  state.totalQ=state.sets.reduce((a,s)=>a+s.sections.reduce((n,c)=>n+c.questions.length,0),0);
  state.fullMarks=250; state.passMarks=200;
 }
+
+function latestResultRefs(uid) {
+  return SET_NAMES.map((_, i) => doc(db, "users", uid, "latestResults", `set_${i + 1}`));
+}
+
+function resultRows(snapshot) {
+  return snapshot.docs.map(entry => ({ ...entry.data(), id: entry.id }));
+}
+
+function readLegacyResults(uid) {
+  return memoRead("legacyResults", async () => resultRows(await getDocs(collection(db, "users", uid, "results"))));
+}
+
+async function removeMigratedResults(uid, legacy, latest) {
+  const migrated = new Set(latest.map(row => row.setIdx));
+  const obsolete = legacy.filter(row => migrated.has(row.setIdx));
+  // Each delete can consult its set's replacement in Firestore rules.
+  const batchSize = 20;
+  for (let i = 0; i < obsolete.length; i += batchSize) {
+    const batch = writeBatch(db);
+    obsolete.slice(i, i + batchSize).forEach(row => batch.delete(doc(db, "users", uid, "results", row.id)));
+    await batch.commit();
+  }
+  clearFastReads("legacyResults");
+}
+
+async function cleanUpLegacy(uid, legacy, latest) {
+  const cleanupKey = `dj_legacy_cleanup_${uid}`;
+  try { localStorage.setItem(cleanupKey, "1"); } catch {}
+  try {
+    await removeMigratedResults(uid, legacy, latest);
+    localStorage.removeItem(cleanupKey);
+  } catch (error) {
+    console.warn("Legacy result cleanup will be retried", error);
+  }
+}
+
 async function loadResults(uid) {
   try {
-    const q = query(collection(db, "users", uid, "results"), orderBy("submittedAt", "desc"));
-    const snap = await getDocs(q);
-    const out = [];
-    snap.forEach(d => out.push({ id: d.id, ...d.data() }));
-    const merged=mergeAttempts(out,readLocalAttempts(uid));saveResultsCache(uid,merged);
+    let cloud = resultRows(await getDocs(collection(db, "users", uid, "latestResults")));
+    if (state.user?.uid !== uid) return [];
+    if (!cloud.length) {
+      const legacy = await readLegacyResults(uid);
+      cloud = latestBySet(legacy);
+      if (cloud.length && hasPremium() && state.user?.uid === uid) {
+        try {
+          await checkFreeAccess();
+          cloud = await writeLatestResults(uid, legacy);
+          clearFastReads("leaderboard");
+          void cleanUpLegacy(uid, legacy, cloud);
+        } catch (error) {
+          console.warn("Legacy results remain available; migration will retry", error);
+        }
+      }
+    } else {
+      try {
+        if (localStorage.getItem(`dj_legacy_cleanup_${uid}`)) {
+          void readLegacyResults(uid).then(legacy => cleanUpLegacy(uid, legacy, cloud)).catch(console.warn);
+        }
+      } catch {}
+    }
+    const merged = latestBySet([...cloud, ...readLocalAttempts(uid)]);
+    saveResultsCache(uid, merged);
     return merged;
-  } catch { return mergeAttempts(loadResultsCache(uid)||[],readLocalAttempts(uid)); }
-}
-async function loadResultsCached(uid) {
-  const cached = loadResultsCache(uid);
-  if (cached) return mergeAttempts(cached,readLocalAttempts(uid));
-  return await loadResults(uid);
+  } catch {
+    return latestBySet([...(loadResultsCache(uid) || []), ...readLocalAttempts(uid)]);
+  }
 }
 async function loadPlans() {
   try {
@@ -590,7 +664,9 @@ async function loadPlansCached() {
 }
 async function loadLeaderboard() {
  try {
-  const snap=await getDocs(query(collection(db,"leaderboard"),orderBy("bestScore","desc"),limit(20)));
+  const snap = await memoRead("leaderboard", () => getDocs(query(
+    collection(db, "leaderboard"), orderBy("averagePercentage", "desc"), limit(20)
+  )), 30000);
   return snap.docs.map(d=>({uid:d.id,streak:0,...d.data()}));
  } catch(e) {toast("Leaderboard: "+e.message,"err"); return [];}
 }
@@ -756,7 +832,7 @@ function renderSignup() {
 function renderHomeScreen() {
   const p = state.profile || {};
   const results = state.results || [];
-  const completed = results.length;
+  const completed = results.reduce((sum, row) => sum + (row.attemptCount || 1), 0);
   const best = completed ? Math.max(...results.map(r => r.percentage || 0)) : 0;
   const premiumActive = p.premium && daysLeft(p.premium.expiry) > 0;
   const hasAccess = premiumActive || state.isAdmin;
@@ -908,13 +984,19 @@ function passageHTML(value){
 function questionActions(){return `<div class="question-actions"><button type="button" class="question-tool" data-report>⚑ Report</button><button type="button" class="question-tool" data-bookmark="current">Bookmark</button></div>`;}
 function showPreparing(title,detail){modal(title,`<div class="preparing-panel" role="status" aria-live="polite"><div class="prep-orbit"><span>DJ</span></div><p>${esc(detail)}</p><div class="prep-track"><i></i></div><small>Please wait a moment</small></div>`,[]);}
 function sectionPercent(section){const items=section.items||[];return items.length?Math.round(items.filter(it=>it.yourAns!=null&&it.yourAns===it.correctAns).length/items.length*100):0;}
-function attemptHistory(set){
- const attempts=state.results.filter(r=>Number(r.setIdx)===set.idx);
- if(!attempts.length)return "";
- const latest=attempts[0];
- return `<section class="attempt-summary card mt-2"><div class="flex-between"><div><span class="muted small">YOUR PROGRESS</span><h3>Previous attempt</h3></div><span class="badge badge-info">${attempts.length} attempt${attempts.length===1?"":"s"}</span></div><div class="attempt-score"><b>${Math.round(latest.score)}<small> / 250</small></b><span>${Number(latest.percentage)}% · ${fmtDate(latest.submittedAt)}</span></div><div class="result-stats"><div><h4>Correct</h4><p class="g">${latest.correct}</p></div><div><h4>Wrong</h4><p class="r">${latest.wrong}</p></div><div><h4>Skipped</h4><p>${latest.unanswered}</p></div><div><h4>Best</h4><p>${Math.round(Math.max(...attempts.map(a=>a.score)))}</p></div></div><div class="attempt-reviews">${["all","correct","wrong"].map(f=>`<button class="btn btn-ghost btn-sm" data-attempt="${esc(latest.attemptId||latest.id)}" data-attempt-filter="${f}">${f==="all"?"Review all":f==="correct"?"Right answers":"Wrong answers"}</button>`).join("")}</div><p class="muted small mt-1">${attempts.length>1?"Recent attempts below · ":""}Practice again to improve your score.</p>${attempts.slice(1).map(r=>`<button class="attempt-row" data-attempt="${esc(r.attemptId||r.id)}" data-attempt-filter="all"><span>${fmtDate(r.submittedAt)}</span><b>${Math.round(r.score)} / 250</b><span>Review →</span></button>`).join("")}</section>`;
-}
 
+function attemptHistory(set) {
+  const latest = state.results.find(row => Number(row.setIdx) === set.idx);
+  if (!latest) return "";
+  const count = latest.attemptCount || 1;
+  return `<button type="button" class="latest-attempt" data-attempt="${esc(latest.attemptId || latest.id)}">
+    <span class="latest-attempt-icon">${actionIcon("history")}</span>
+    <span class="latest-attempt-copy"><strong>Latest attempt</strong>
+      <small>${Math.round(latest.score)} / 250 · ${latest.percentage}% · ${fmtDate(latest.submittedAt)}</small></span>
+    <span class="latest-attempt-count">${count} ${count === 1 ? "attempt" : "attempts"}</span>
+    <span aria-hidden="true" class="action-chevron">›</span>
+  </button>`;
+}
 function renderStart() {
   const setIdx = +state.params.set || 0;
   const set = state.sets[setIdx];
@@ -939,12 +1021,12 @@ function renderStart() {
 
   return `${topbarHTML()}<div class="wrap" style="padding-top:16px;padding-bottom:40px">
     <button class="btn btn-ghost btn-sm mb-2" data-go="sets">← Back</button>
-    <div class="card card-lg">
-      <div style="width:70px;height:70px;border-radius:50%;background:var(--grad);color:#fff;
+    <div class="card card-lg exam-start-card">
+      <div class="exam-set-symbol" style="width:70px;height:70px;border-radius:50%;background:var(--grad);color:#fff;
         display:grid;place-items:center;font-size:32px;font-weight:800;margin:0 auto 16px">${set.kana}</div>
       <h2 class="center">${set.name}</h2>
       <p class="center muted mt-1" style="font-size:11px;letter-spacing:1.2px;font-weight:800;color:var(--purple)">JFT-BASIC PRACTICE MOCK TEST</p>
-      <div class="grid-2 mt-3 mb-3">
+      <div class="grid-2 mt-3 mb-3 exam-start-metrics">
         <div class="center" style="background:var(--bg);border-radius:12px;padding:14px">
           <div style="font-size:22px;font-weight:900">${set.sections.reduce((n,s)=>n+s.questions.length,0)}</div><div class="muted small">Questions</div></div>
         <div class="center" style="background:var(--bg);border-radius:12px;padding:14px">
@@ -955,15 +1037,15 @@ function renderStart() {
           <div style="font-size:22px;font-weight:900">${state.passMarks}</div><div class="muted small">Pass Mark</div></div>
       </div>
       ${attemptHistory(set)}
-      <h3 class="mb-1 mt-2">Exam Rules</h3>
-      <ol class="muted mb-3" style="padding-left:18px;font-size:12.5px;line-height:1.7">
+      <details class="exam-rules"><summary>Exam rules</summary>
+      <ol class="muted" style="padding-left:18px;font-size:12.5px;line-height:1.7">
         <li>Once you finish a section you cannot return to it</li>
         <li>Timer auto-submits the exam at 00:00</li>
         <li>Answer each question before moving forward</li>
         <li>Audio can be replayed ${MAX_PLAYS} times per question</li>
         <li>Pass mark: ${state.passMarks} / ${state.fullMarks} (80%)</li>
         <li>Your progress is saved if you refresh the page</li>
-      </ol>
+      </ol></details>
       <label class="flex" style="background:var(--bg);padding:12px;border-radius:10px;cursor:pointer">
         <input type="checkbox" id="agree" style="width:18px;height:18px;accent-color:var(--purple)">
         <span style="font-size:12.5px;font-weight:600">I understand the rules and am ready</span>
@@ -1057,6 +1139,8 @@ function renderResult() {
         <div><h4>Wrong</h4><p class="r">${r.wrong}</p></div>
         <div><h4>Skipped</h4><p>${r.unanswered}</p></div>
         <div><h4>Percent</h4><p>${pct}%</p></div>
+        <div><h4>Time used</h4><p>${audioClock(r.timeUsed)}</p></div>
+        <div><h4>Attempts</h4><p>${r.attemptCount || 1}</p></div>
       </div>
     </div>
     <section class="card jft-result mt-2">
@@ -1092,7 +1176,7 @@ function renderReview() {
       </div>
     </div>
     ${r.sections.map(s => {
-      const items = s.items.filter(it => filter === "all" || (filter === "correct" ? it.yourAns != null && it.yourAns === it.correctAns : it.yourAns !== it.correctAns));
+      const items = (s.items || []).filter(it => filter === "all" || (filter === "correct" ? it.yourAns != null && it.yourAns === it.correctAns : it.yourAns !== it.correctAns));
       if (!items.length) return "";
       return `<h3 class="mt-2 mb-1" style="color:var(--purple);font-size:12px;letter-spacing:.8px;text-transform:uppercase">${esc(s.name)}</h3>
         ${items.map(it => `
@@ -1114,6 +1198,28 @@ function renderReview() {
   </div>`;
 }
 
+
+function actionIcon(name) {
+  const paths = {
+    admin: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    bookmarks: '<path d="M6 4h12v17l-6-4-6 4z"/>',
+    leaderboard: '<path d="M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4ZM7 6H3v2a4 4 0 0 0 4 4m10-6h4v2a4 4 0 0 1-4 4"/>',
+    premium: '<path d="m3 7 5 5 4-7 4 7 5-5-2 12H5z"/>',
+    logout: '<path d="M10 4H4v16h6m-1-8h12m-4-4 4 4-4 4"/>',
+    history: '<path d="M3 12a9 9 0 1 1 2.6 6.4M3 5v7h7m2-5v5l3 2"/>'
+  };
+  return `<svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
+}
+
+function profileAction(name, label, detail = "") {
+  const action = name === "logout" ? 'id="logoutBtn"' : `data-go="${name}"`;
+  return `<button type="button" class="profile-action profile-action-${name}" ${action}>
+    <span class="profile-action-icon">${actionIcon(name)}</span>
+    <strong>${label}</strong>${detail ? `<span class="profile-action-detail">${detail}</span>` : ""}
+    <span aria-hidden="true" class="action-chevron">›</span>
+  </button>`;
+}
+
 function renderProfile() {
   const p = state.profile || {};
   const premActive = p.premium && daysLeft(p.premium.expiry) > 0;
@@ -1126,9 +1232,9 @@ function renderProfile() {
       <div class="role-badge">${state.isAdmin ? " Administrator" : premActive ? " Premium" : "Student"}</div>
     </div>
     <div class="grid-3 mt-2">
-      <div class="stat-card center"><div class="num">${state.results.length}</div><div class="lbl">Tests</div></div>
+      <div class="stat-card center"><div class="num">${state.results.reduce((sum, row) => sum + (row.attemptCount || 1), 0)}</div><div class="lbl">Attempts</div></div>
       <div class="stat-card center"><div class="num">${streak}</div><div class="lbl">Streak</div></div>
-      <div class="stat-card center"><div class="num">${p.bestScore || 0}%</div><div class="lbl">Best</div></div>
+      <div class="stat-card center"><div class="num">${state.results.length ? leaderboardSummary(state.results).averagePercentage : 0}%</div><div class="lbl">Latest avg</div></div>
     </div>
     <div class="card mt-2">
       <h3 class="mb-2">Account Status</h3>
@@ -1144,11 +1250,14 @@ function renderProfile() {
         <span class="muted small">Member Since</span>
         <span style="font-size:12px;font-weight:700">${fmtDate(p.createdAt)}</span></div>
     </div>
-    ${state.isAdmin ? `<button class="btn btn-primary btn-block mt-2" data-go="admin"> Open Admin Dashboard</button>` : ""}
-    <button class="btn btn-ghost btn-block mt-1" data-go="bookmarks"> My Bookmarks (${(p.bookmarks || []).length})</button>
-    <button class="btn btn-ghost btn-block mt-1" data-go="leaderboard"> Leaderboard</button>
-    <button class="btn btn-ghost btn-block mt-1" data-go="premium">View Premium Plans</button>
-    <button class="btn btn-danger btn-block mt-1" id="logoutBtn">Logout</button>
+
+    <div class="profile-actions" aria-label="Account shortcuts">
+      ${state.isAdmin ? profileAction("admin", "Open Admin Dashboard") : ""}
+      ${profileAction("bookmarks", "My Bookmarks", (p.bookmarks || []).length || "")}
+      ${profileAction("leaderboard", "Leaderboard")}
+      ${profileAction("premium", "View Premium Plans")}
+      ${profileAction("logout", "Logout")}
+    </div>
   </div>${bottomNavHTML("profile")}`;
 }
 
@@ -1226,14 +1335,14 @@ function renderLeaderboard() {
   return `${topbarHTML()}<div class="wrap" style="padding:16px 0 80px">
     <button class="btn btn-ghost btn-sm mb-2" data-go="home">← Back</button>
     <h2 class="mb-1"> Leaderboard</h2>
-    <p class="muted mb-3">Top 20 students by best practice score. Scores are reported by student browsers.</p>
+    <p class="muted mb-3">Top 20 by the average of the latest score from each completed set. Each set counts once.</p>
     <div class="card">
       ${lb.length ? lb.map((u, i) => {
         const rankClass = i === 0 ? "gold" : i === 1 ? "silver" : i === 2 ? "bronze" : "";
         return `<div class="lb-row">
           <div class="lb-rank ${rankClass}">${i + 1}</div>
-          <div class="lb-info"><b>${esc(u.name)}</b><span> ${u.streak}-day streak</span></div>
-          <div class="lb-score">${u.bestScore}%</div>
+          <div class="lb-info"><b>${esc(u.name)}</b><span>${u.setCount} / ${SET_NAMES.length} sets · ${u.streak}-day streak</span></div>
+          <div class="lb-score">${u.averagePercentage}%</div>
         </div>`;
       }).join("") : `<div class="empty">No scores yet.</div>`}
     </div>
@@ -1246,11 +1355,11 @@ function renderAdmin() {
   const tabs = [
     { id:"overview", label:"Overview" },{ id:"students", label:"Students" },
     { id:"requests", label:"Requests" },{ id:"questions", label:"Questions" },
-    { id:"settings", label:"Settings" }
+    { id:"reports", label:"Reports" },{ id:"settings", label:"Settings" }
   ];
   const contentMap = {
     overview: adminOverviewHTML, students: adminStudentsHTML, requests: adminRequestsHTML,
-    questions: adminQuestionsHTML, settings: adminSettingsHTML
+    questions: adminQuestionsHTML, reports: adminReportsHTML, settings: adminSettingsHTML
   };
   return `${topbarHTML()}<div class="wrap" style="padding:16px 0 80px">
     <button class="btn btn-ghost btn-sm mb-2" data-go="profile">← Back</button>
@@ -1262,13 +1371,19 @@ function renderAdmin() {
   </div>`;
 }
 function adminOverviewHTML() {
-  return `<div class="grid-2">
+  return `<div class="flex-between mb-2"><h3>Overview</h3><button class="btn btn-ghost btn-sm" id="refreshStats">Refresh stats</button></div>
+  <div class="grid-2 admin-overview">
     <button class="stat-card" data-stat="statTotal" data-admin-tab="students"><div class="num" id="statTotal">…</div><div class="lbl">Total Students</div></button>
     <button class="stat-card" data-stat="statActive" data-admin-tab="students"><div class="num" id="statActive">…</div><div class="lbl">Active</div></button>
     <button class="stat-card" data-stat="statBlocked" data-admin-tab="students"><div class="num" id="statBlocked">…</div><div class="lbl">Blocked</div></button>
     <button class="stat-card" data-stat="statPremium" data-admin-tab="students"><div class="num" id="statPremium">…</div><div class="lbl">Premium</div></button>
     <button class="stat-card" data-stat="statPending" data-admin-tab="requests"><div class="num" id="statPending">…</div><div class="lbl">Pending Requests</div></button>
     <button class="stat-card" data-stat="statQuestions" data-admin-tab="questions"><div class="num" id="statQuestions">…</div><div class="lbl">Questions</div></button>
+    <button class="stat-card" data-stat="statOnline" data-admin-tab="students"><div class="num" id="statOnline">…</div><div class="lbl">Online students</div><small>Seen in the last 7 min</small></button>
+    <button class="stat-card" data-stat="statToday" data-admin-tab="students"><div class="num" id="statToday">…</div><div class="lbl">Premium started today</div><small>Nepal time</small></button>
+    <button class="stat-card" data-stat="statExpired" data-admin-tab="students"><div class="num" id="statExpired">…</div><div class="lbl">Premium expired</div></button>
+    <div class="stat-card"><div class="num" id="statAvgTime">…</div><div class="lbl">Average exam time</div><small>Latest saved result per set</small></div>
+    <button class="stat-card" data-admin-tab="reports"><div class="num" id="statReports">…</div><div class="lbl">Open question reports</div></button>
   </div>
   <div class="card mt-2"><h3 class="mb-1">Quick Actions</h3>
     <div class="grid-2">
@@ -1281,11 +1396,54 @@ function adminOverviewHTML() {
 }
 function adminStudentsHTML() {
   return `<div class="field"><input type="text" id="studentSearch" class="input" placeholder="Search by name or email…"></div>
-    <select class="input mb-2" id="studentFilter"><option value="all">All students</option><option value="active">Active</option><option value="blocked">Blocked</option><option value="premium">Premium</option><option value="expired">Expired premium</option></select><div id="studentsList"><p class="muted center" style="padding:24px">Loading…</p></div>`;
+    <select class="input mb-2" id="studentFilter"><option value="all">All students</option><option value="active">Active</option><option value="blocked">Blocked</option><option value="premium">Premium</option><option value="expired">Expired premium</option><option value="online">Online recently</option><option value="today">Premium started today</option></select><div id="studentsList"><p class="muted center" style="padding:24px">Loading…</p></div>`;
 }
 function adminRequestsHTML() {
   return `<div id="requestsList"><p class="muted center" style="padding:24px">Loading…</p></div>`;
 }
+
+function adminReportsHTML() {
+  return `<div class="flex-between mb-2"><h3>Question reports</h3>
+    <button class="btn btn-ghost btn-sm" id="refreshReports">Refresh</button></div>
+    <select class="input mb-2" id="reportFilter" aria-label="Report status">
+      <option value="open">Open reports</option><option value="resolved">Resolved reports</option>
+    </select><div id="questionReportsList" aria-live="polite"></div>`;
+}
+
+async function loadQuestionReports() {
+  const list = $("questionReportsList");
+  const filter = $("reportFilter");
+  if (!state.isAdmin || !list || !filter) return;
+  const status = filter.value;
+  list.innerHTML = '<p class="muted center">Loading reports…</p>';
+  try {
+    const snapshot = await getDocs(query(collection(db, "questionReports"), where("status", "==", status)));
+    if (!list.isConnected || filter.value !== status) return;
+    const reports = resultRows(snapshot).sort((a, b) => membershipUntil(b.createdAt) - membershipUntil(a.createdAt));
+    list.innerHTML = reports.map(report => `<article class="admin-q-item question-report">
+      <div class="flex-between"><h4>Set ${report.setIdx} · ${esc(SECTIONS.find(section => section.key === report.section)?.short || report.section)} · Q${report.questionNumber}</h4>
+        <span class="badge ${status === "open" ? "badge-warn" : "badge-success"}">${status}</span></div>
+      <p class="muted small">${esc(report.email)} · ${fmtDate(report.createdAt)} · ID ${esc(report.questionId)}</p>
+      <p class="question-report-text">${esc(report.question)}</p>
+      <p class="question-report-reason">${esc(report.reason)}</p>
+      ${status === "open" ? `<button class="btn btn-ghost btn-sm mt-1" data-resolve-report="${esc(report.id)}">Mark resolved</button>` : ""}
+    </article>`).join("") || '<p class="empty">No reports in this view.</p>';
+    list.querySelectorAll("[data-resolve-report]").forEach(button => {
+      button.onclick = async () => {
+        await updateDoc(doc(db, "questionReports", button.dataset.resolveReport), {
+          status: "resolved", resolvedAt: serverTimestamp()
+        });
+        clearFastReads("adminOpenReports");
+        toast("Report resolved", "ok");
+        await loadQuestionReports();
+      };
+    });
+    bindFastButtons(list);
+  } catch (error) {
+    if (list.isConnected && filter.value === status) list.textContent = "Could not load reports. Click Refresh to try again.";
+  }
+}
+
 function adminQuestionsHTML() {
   return `<div class="flex-between mb-2">
     <h3>Questions</h3>
@@ -1319,9 +1477,16 @@ function adminSettingsHTML() {
 
 /* ============ POST-RENDER ============ */
 function postRender() {
-  document.querySelectorAll("[data-attempt]").forEach(b=>b.onclick=()=>{const r=state.results.find(r=>(r.attemptId||r.id)===b.dataset.attempt);if(r){saveResult(r);navigate("review",{filter:b.dataset.attemptFilter||"all"});}});
+  document.querySelectorAll("[data-attempt]").forEach(button => {
+    button.onclick = () => {
+      const result = state.results.find(row => (row.attemptId || row.id) === button.dataset.attempt);
+      if (!result) return;
+      saveResult(result);
+      navigate("result");
+    };
+  });
   if($("copyPastPassword")) $("copyPastPassword").onclick=async()=>{try{await navigator.clipboard.writeText("myreservasi");toast("Password copied","ok");}catch(e){const el=document.createElement("textarea");el.value="myreservasi";document.body.append(el);el.select();const ok=document.execCommand("copy");el.remove();toast(ok?"Password copied":"Please copy the password manually",ok?"ok":"err");}};
-  if($("retryCloud"))$("retryCloud").onclick=async()=>{const r=loadResult();if(!r)return;try{await saveResultToDb(r,r.attemptId);render();toast("Saved to cloud","ok");}catch(e){toast(e.message,"err");}};
+  if($("retryCloud"))$("retryCloud").onclick=async()=>{const r=loadResult();if(!r)return;try{await saveResultToDb(r);render();toast("Saved to cloud","ok");}catch(e){toast(e.message,"err");}};
   if($("pendingAdminButton"))$("pendingAdminButton").onclick=()=>{adminTab="requests";navigate("admin");};
   if($("retryContent"))$("retryContent").onclick=()=>loadDataInBackground();
   document.querySelectorAll("[data-go]").forEach(el => {
@@ -1331,7 +1496,7 @@ function postRender() {
     el.onclick = () => navigate(el.dataset.nav);
   });
   document.querySelectorAll("[data-admin-tab]").forEach(el => {
-    el.onclick = () => { adminTab = el.dataset.adminTab; state._studentFilter=({statActive:"active",statBlocked:"blocked",statPremium:"premium"})[el.dataset.stat]||"all"; render(); if($("studentFilter")) $("studentFilter").value=state._studentFilter; };
+    el.onclick = () => { adminTab = el.dataset.adminTab; state._studentFilter=({statActive:"active",statBlocked:"blocked",statPremium:"premium",statOnline:"online",statToday:"today",statExpired:"expired"})[el.dataset.stat]||"all"; render(); if($("studentFilter")) $("studentFilter").value=state._studentFilter; };
   });
   document.querySelectorAll("[data-review]").forEach(el => {
     el.onclick = () => navigate("review", { filter: el.dataset.review });
@@ -1376,7 +1541,7 @@ function postRender() {
     agree.onchange = () => { startBtn.disabled = !agree.checked; };
     startBtn.onclick = () => {
       if (!agree.checked) return toast("Please agree to the rules", "err");
-      return beginExam(+state.params.set);
+      return beginExam(Number(state.params.set) || 0);
     };
   }
   const reqAcc2 = $("reqAcc2");
@@ -1676,8 +1841,10 @@ async function finishExam() {
   const wrong = totalQ - correct - unanswered;
   const percentage = Math.round(score / state.fullMarks * 100);
   const attemptId = `attempt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const previous = state.results.find(row => row.setIdx === ex.set.idx);
   const result = {
-    cloudSaved:false, attemptId:ex.attemptId||attemptId, answers:ex.sections.map(s=>({key:s.key,answers:s.questions.map(q=>q.sel??null)})),
+    attemptCount: (previous?.attemptCount || 0) + 1,
+    cloudSaved: false, attemptId: ex.attemptId || attemptId,
     setIdx: ex.set.idx, setName: ex.set.name,
     score, maxScore: state.fullMarks, percentage,
     correct, wrong, unanswered, sections, timeUsed: used,
@@ -1686,7 +1853,7 @@ async function finishExam() {
   };
 
   saveResult(result);
-  state.results.unshift({...result,id:result.attemptId});
+  state.results = latestBySet([result, ...state.results]);
   saveLocalAttempts();
   clearExamState();
   invalidateResultsCache(state.user.uid);   // force re-fetch next visit
@@ -1698,30 +1865,93 @@ async function finishExam() {
 
   closeModal();
   replaceNavigate("result");
-  saveResultToDb(result, attemptId).then(()=>{if(state.screen==="result" && loadResult()?.attemptId===result.attemptId)render();}).catch(error=>{console.warn("Result kept on this browser",error);if(state.screen==="result")toast("Result saved on this browser. Cloud save is pending.");});
+  saveResultToDb(result).then(()=>{if(state.screen==="result" && loadResult()?.setIdx===result.setIdx)render();}).catch(error=>{console.warn("Result kept on this browser",error);if(state.screen==="result")toast("Result saved on this browser. Cloud save is pending.");});
 }
 
-async function saveResultToDb(result,attemptId) {
- const uid=requireSession();await checkFreeAccess();
- const id=result.attemptId||attemptId||uuid();
- const {id:ignoredId,...payload}=result;
- const clean=JSON.parse(JSON.stringify({...payload,attemptId:id,cloudSaved:true,scoreSource:"browser"}));
- const resultRef=doc(db,"users",uid,"results",id),userRef=doc(db,"users",uid),leaderRef=doc(db,"leaderboard",uid);
- await runTransaction(db,async tx=>{
-  const [previous,u,lb]=await Promise.all([tx.get(resultRef),tx.get(userRef),tx.get(leaderRef)]);
-  if(previous.exists())return;
-  if(!u.exists()||(!state.isAdmin&&!activeProfile(u.data())))throw new Error("Premium expired before the result could be saved");
-  if(!Number.isFinite(clean.score)||clean.score<0||clean.score>250||!Number.isInteger(clean.percentage)||clean.percentage<0||clean.percentage>100)throw new Error("Invalid mock-test result");
-  const best=Math.max(lb.exists()?Number(lb.data().bestScore)||0:0,clean.percentage);
-  tx.set(resultRef,{...clean,submittedAt:serverTimestamp()});
-  tx.set(leaderRef,{name:String(u.data().name||"Student").slice(0,80),bestScore:best,streak:Number(u.data().streak?.count)||0,latestAttempt:id,updatedAt:serverTimestamp(),scoreSource:"browser"});
-  if(best>(Number(u.data().bestScore)||0))tx.update(userRef,{bestScore:best});
- });
- Object.assign(result,{attemptId:id,cloudSaved:true,scoreSource:"browser"});if(loadResult()?.attemptId===id)saveResult(result);
- const at=state.results.findIndex(r=>(r.attemptId||r.id)===id);if(at<0)state.results.unshift({...result,id});else state.results[at]={...result,id};saveLocalAttempts();
- invalidateResultsCache(uid);void loadLeaderboard().then(rows=>state.leaderboard=rows).catch(()=>{});
+
+function cloudResult(row) {
+  const { attemptId, setIdx, setName, score, maxScore, percentage, correct, wrong,
+    unanswered, sections, timeUsed, startedAt, attemptCount } = row;
+  return JSON.parse(JSON.stringify({
+    attemptId: attemptId || row.id, setIdx, setName, score, maxScore, percentage,
+    correct, wrong, unanswered, sections, timeUsed, startedAt, attemptCount,
+    cloudSaved: true, scoreSource: "browser"
+  }));
 }
 
+function leaderboardSummary(rows) {
+  const percentageSum = rows.reduce((sum, row) => sum + row.percentage, 0);
+  const totalTimeUsed = rows.reduce((sum, row) => sum + row.timeUsed, 0);
+  return {
+    averagePercentage: Math.round(percentageSum * 100 / rows.length) / 100,
+    setCount: rows.length, completedSets: rows.map(row => row.setIdx), totalTimeUsed
+  };
+}
+
+async function writeLatestResults(uid, legacy, incoming) {
+  const refs = latestResultRefs(uid);
+  const userRef = doc(db, "users", uid);
+  return runTransaction(db, async tx => {
+    const [user, ...snapshots] = await Promise.all([tx.get(userRef), ...refs.map(ref => tx.get(ref))]);
+    if (!user.exists() || (!state.isAdmin && !activeProfile(user.data()))) {
+      throw new Error("Active premium is required to save results");
+    }
+    const existing = snapshots.filter(snapshot => snapshot.exists()).map(snapshot => snapshot.data());
+    const rows = new Map(existing.map(row => [row.setIdx, row]));
+    const changes = new Map();
+    if (!existing.length) {
+      for (const row of latestBySet(legacy)) changes.set(row.setIdx, row);
+    }
+    if (incoming) {
+      const previous = changes.get(incoming.setIdx) || rows.get(incoming.setIdx);
+      const sameAttempt = previous?.attemptId === incoming.attemptId;
+      if (!sameAttempt && (!previous || resultTime(incoming) >= resultTime(previous))) {
+        changes.set(incoming.setIdx, {
+          ...incoming, attemptCount: Math.max((previous?.attemptCount || 0) + 1, incoming.attemptCount || 1)
+        });
+      }
+    }
+    for (const [setIdx, row] of changes) {
+      const data = {
+        ...cloudResult(row),
+        submittedAt: row.submittedAt?.toMillis ? row.submittedAt : new Date(resultTime(row)),
+        savedAt: serverTimestamp()
+      };
+      tx.set(refs[setIdx - 1], data);
+      rows.set(setIdx, { ...data, submittedAt: row.submittedAt, savedAt: Date.now() });
+    }
+    const latest = [...rows.values()];
+    if (changes.size) {
+      tx.set(doc(db, "leaderboard", uid), {
+        ...leaderboardSummary(latest),
+        name: String(user.data().name || "Student").slice(0, 80),
+        streak: Number(user.data().streak?.count) || 0,
+        scoreSource: "browser", updatedAt: serverTimestamp()
+      });
+    }
+    return latest;
+  });
+}
+
+async function saveResultToDb(result) {
+  return onceJob(`save-result:${result.attemptId}`, async () => {
+    const uid = requireSession();
+    await checkFreeAccess();
+    const knownCloud = state.results.some(row => row.savedAt);
+    const legacy = knownCloud ? [] : await readLegacyResults(uid);
+    if (state.user?.uid !== uid) throw new Error("Please sign in again");
+    const latest = await writeLatestResults(uid, legacy, result);
+    if (legacy.length) void cleanUpLegacy(uid, legacy, latest);
+    if (state.user?.uid !== uid) return;
+    const saved = latest.find(row => row.setIdx === result.setIdx);
+    state.results = latestBySet([...latest, ...state.results.filter(row => row.attemptId !== result.attemptId)]);
+    saveLocalAttempts();
+    if (loadResult()?.attemptId === result.attemptId) saveResult(saved);
+    saveResultsCache(uid, state.results);
+    clearFastReads("leaderboard");
+    void loadLeaderboard().then(rows => { if (state.user?.uid === uid) state.leaderboard = rows; });
+  });
+}
 function stopAudio() {
   if (state._audio) { try { state._audio.pause(); } catch {} state._audio = null; }
   if ("speechSynthesis" in window) speechSynthesis.cancel();
@@ -1887,6 +2117,10 @@ async function shareResult() {
 function bindAdminTab() {
   if (adminTab === "overview") {
     loadStats();
+    $("refreshStats").onclick = () => {
+      clearFastReads("adminUsers", "pendingRequests", "adminExamTime", "adminOpenReports");
+      return loadStats();
+    };
     const rb = $("refreshQBtn");
     if (rb) rb.onclick = refreshQuestions;
   }
@@ -1896,6 +2130,11 @@ function bindAdminTab() {
     loadStudents();
   }
   if (adminTab === "requests") loadRequests();
+  if (adminTab === "reports") {
+    $("reportFilter").onchange = loadQuestionReports;
+    $("refreshReports").onclick = loadQuestionReports;
+    loadQuestionReports();
+  }
   if (adminTab === "questions") {
     $("qSearch").oninput = debounce(filterQuestions);
     $("qSet").onchange=$("qSection").onchange=filterQuestions;
@@ -1914,23 +2153,52 @@ function bindAdminTab() {
     $("importBtn").onclick = importJSON;
   }
 }
+
+const nepalDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kathmandu", dateStyle: "short" });
+
+function isOnlineStudent(user) {
+  const seen = membershipUntil(user.lastSeen);
+  return user.status === "active" && seen > Date.now() - 7 * 60000;
+}
+
+function premiumStartedToday(user) {
+  const start = membershipUntil(user.premium?.start);
+  return start > 0 && nepalDate.format(start) === nepalDate.format(Date.now());
+}
+
 async function loadStats() {
-  try {
-    const [usersSnap,reqSnap,questions]=await Promise.all([memoRead("adminUsers",()=>getDocs(collection(db,"users"))),memoRead("pendingRequests",()=>getDocs(query(collection(db,"accessRequests"),where("status","==","pending")))),readQuestionRows()]);
-    let total = 0, active = 0, blocked = 0, premiumActive = 0;
-    usersSnap.forEach(d => {
-      const u = d.data();
-      total++;
-      if (u.status === "blocked") blocked++; else active++;
-      if (u.premium && u.premium.expiry && daysLeft(u.premium.expiry) > 0) premiumActive++;
-    });
-    if ($("statTotal")) $("statTotal").textContent = total;
-    if ($("statActive")) $("statActive").textContent = active;
-    if ($("statBlocked")) $("statBlocked").textContent = blocked;
-    if ($("statPremium")) $("statPremium").textContent = premiumActive;
-    if ($("statPending")) $("statPending").textContent = reqSnap.size;
-    if ($("statQuestions")) $("statQuestions").textContent = questions.length;
-  } catch(e) {toast("Stats: "+e.message,"err");}
+  const sources = await Promise.allSettled([
+    memoRead("adminUsers", () => getDocs(collection(db, "users"))),
+    memoRead("pendingRequests", () => getCountFromServer(query(collection(db, "accessRequests"), where("status", "==", "pending")))),
+    readQuestionRows(),
+    memoRead("adminExamTime", () => getAggregateFromServer(collection(db, "leaderboard"), {
+      sets: sum("setCount"), seconds: sum("totalTimeUsed")
+    })),
+    memoRead("adminOpenReports", () => getCountFromServer(query(collection(db, "questionReports"), where("status", "==", "open"))))
+  ]);
+  function show(id, value) {
+    if ($(id)) $(id).textContent = value ?? "—";
+  }
+  const [students, requests, questions, timing, reports] = sources.map(result => result.value);
+  const users = students?.docs.filter(entry => entry.id !== state.user?.uid).map(entry => entry.data());
+  show("statTotal", users?.length);
+  show("statActive", users?.filter(user => user.status === "active").length);
+  show("statBlocked", users?.filter(user => user.status === "blocked").length);
+  show("statPremium", users?.filter(activeProfile).length);
+  show("statOnline", users?.filter(isOnlineStudent).length);
+  show("statToday", users?.filter(premiumStartedToday).length);
+  show("statExpired", users?.filter(user => {
+    const expiry = membershipUntil(user.premium?.expiry);
+    return expiry > 0 && expiry <= Date.now();
+  }).length);
+  show("statPending", requests?.data().count);
+  show("statQuestions", questions?.length);
+  show("statReports", reports?.data().count);
+  const time = timing?.data();
+  show("statAvgTime", time?.sets ? audioClock(Math.round(time.seconds / time.sets)) : null);
+  if (sources.some(result => result.status === "rejected") && state.screen === "admin" && adminTab === "overview") {
+    toast("Some dashboard stats could not load. Refresh to retry.", "warn");
+  }
 }
 async function loadStudents() {
   const list = $("studentsList");
@@ -1942,7 +2210,7 @@ async function loadStudents() {
       if (state.user && d.id === state.user.uid) return;
       users.push({ uid: d.id, ...d.data() });
     });
-    state._allStudents = users;
+    state._allStudents = users.sort((a, b) => (membershipUntil(b.createdAt) || 0) - (membershipUntil(a.createdAt) || 0));
     filterStudents();
   } catch (e) {
     list.innerHTML = `<p class="muted" style="color:var(--red)">Error: ${esc(e.message)}</p>`;
@@ -1963,7 +2231,7 @@ function renderStudentRows(users) {
           ${u.practiceAccess ? '<span class="badge badge-info">Practice</span>' : ""}
         </div>
       </div>
-      <p class="muted small">Note: ${esc(u.note||u.premium?.note||"No note")}</p><p class="muted small">Premium expires: ${fmtDate(u.premium?.expiry)}</p><div class="actions">
+      <p class="muted small">Joined ${fmtDate(u.createdAt)}</p><p class="muted small">Note: ${esc(u.note||u.premium?.note||"No note")}</p><p class="muted small">Premium expires: ${fmtDate(u.premium?.expiry)}</p><div class="actions">
         <button data-uact="grant-prem" data-uid="${u.uid}">Grant Premium</button>
         <button data-uact="revoke" data-uid="${u.uid}">Remove Premium</button><button data-uact="note" data-uid="${u.uid}">Edit Note</button><button data-uact="device" data-uid="${u.uid}">Reset Device</button>
         <button class="${u.status === "blocked" ? "preview" : "del"}" data-uact="toggle-block" data-uid="${u.uid}" data-status="${u.status}">${u.status === "blocked" ? "Unblock" : "Block"}</button>
@@ -1984,7 +2252,7 @@ function filterStudents() {
  const q=($("studentSearch")?.value||"").toLowerCase(), f=$("studentFilter")?.value||"all";
  renderStudentRows((state._allStudents||[]).filter(u=>{
  const active=u.premium && daysLeft(u.premium.expiry)>0;
- return [u.name,u.email,u.note,u.premium?.note].join(" ").toLowerCase().includes(q) && (f==="all" || f==="premium"&&active || f==="expired"&&u.premium&&!active || f==="blocked"&&u.status==="blocked" || f==="active"&&u.status!=="blocked");
+ return [u.name,u.email,u.note,u.premium?.note].join(" ").toLowerCase().includes(q) && (f==="all" || f==="premium"&&active || f==="expired"&&u.premium&&!active || f==="blocked"&&u.status==="blocked" || f==="active"&&u.status==="active" || f==="online"&&isOnlineStudent(u) || f==="today"&&premiumStartedToday(u));
  }));
 }
 async function loadRequests() {
@@ -2248,9 +2516,15 @@ async function loadDataInBackground() {
  return onceJob("background",async()=>{
  await Promise.allSettled([
   (async()=>{state.plans=await loadPlans();})(),
-  (async()=>{if(state.user) state.results=await loadResults(state.user.uid);})(),
+  (async () => {
+    const uid = state.user?.uid;
+    if (!uid) return;
+    const results = await loadResults(uid);
+    if (state.user?.uid !== uid) return;
+    state.results = results;
+    state.leaderboard = await loadLeaderboard();
+  })(),
   (async()=>{const c=await getDoc(doc(db,"appConfig","main"));appConfig=c.exists()?{...appConfig,...c.data()}:appConfig;})(),
-  (async()=>{state.leaderboard=await loadLeaderboard();})(),
   (async()=>{if(hasPremium()){try{const qr=await loadQuestions();state.sets=buildSets(qr.rows);state.contentError=null;recomputeTotals();}catch(e){state.contentError=e.message;state.sets=[];}}})()
  ]);
  if(state.user && ["home","profile","sets","start","premium","bookmarks","leaderboard"].includes(state.screen)) render();
@@ -2258,7 +2532,36 @@ async function loadDataInBackground() {
  });
 }
 
+let presenceTimer;
+
+function startPresence() {
+  clearInterval(presenceTimer);
+  if (state.isAdmin || state.profile?.status !== "active") return;
+  void touchPresence();
+  presenceTimer = setInterval(touchPresence, 5 * 60000);
+}
+
+async function touchPresence() {
+  const uid = state.user?.uid;
+  if (!uid || state.isAdmin || state.profile?.status !== "active" || document.visibilityState !== "visible") return;
+  if (navigator.onLine === false) return;
+  const key = `dj_presence_${uid}`;
+  try {
+    const now = Date.now();
+    if (now - Number(localStorage.getItem(key)) < 4 * 60000) return;
+    localStorage.setItem(key, String(now));
+    await updateDoc(doc(db, "users", uid), { lastSeen: serverTimestamp() });
+  } catch (error) {
+    console.warn("Could not update recent activity", error);
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") void touchPresence();
+});
+
 onAuthStateChanged(auth, async (user) => {
+  clearInterval(presenceTimer);
   if (state._userSub) { state._userSub(); state._userSub = null; }
   if(state._requestsSub){state._requestsSub();state._requestsSub=null;}
   if (state._lockTick) { clearInterval(state._lockTick); state._lockTick = null; }
@@ -2276,6 +2579,8 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   state.user = user;
+  state.results = latestBySet([...(loadResultsCache(user.uid) || []), ...readLocalAttempts(user.uid)]);
+  state.leaderboard = [];
   const { screen, params } = parseHash();
 
   // Try cache for instant render
@@ -2292,6 +2597,7 @@ onAuthStateChanged(auth, async (user) => {
     renderWithBootTarget(screen, params);
     // Realtime updates
     setupRealtimeProfile(user);
+    startPresence();
     // Background data
     loadDataInBackground();
     return;
@@ -2311,6 +2617,7 @@ onAuthStateChanged(auth, async (user) => {
     }
     loadDataInBackground();
     setupRealtimeProfile(user);
+    startPresence();
 
     // Handle Google redirect return
     const redirectTarget = sessionStorage.getItem(REDIRECT_AFTER_KEY);
@@ -2478,14 +2785,46 @@ async function authorizeContent(){
 function audioClock(sec){return Number.isFinite(sec)?`${pad(Math.floor(sec/60))}:${pad(Math.floor(sec%60))}`:"00:00";}
 function mediaMarkup(q){return `<div class="media fixed-media">${q.img?`<div class="image-slot"><img src="${esc(resolveUrl(q.img))}" alt="Question illustration" decoding="async" fetchpriority="high" data-question-img><span class="image-error" hidden>Image unavailable</span><button type="button" class="image-zoom" aria-label="Zoom in image" data-image-zoom>⊕</button></div>`:""}${q.au?`<div class="audio-row" id="audRow"><button class="play-btn" id="playBtn" aria-label="Play or pause audio">Play</button><div class="audio-details"><span id="audioTime">00:00 / 00:00</span><progress id="audioProgress" value="0" max="100" aria-label="Audio progress"></progress><small id="audioLeft">${state.practice?"Unlimited practice":Math.max(0,MAX_PLAYS-(q.played||0))+" plays left"}</small></div></div>`:""}</div>`;}
 function previewMedia(q){return `${q.img?`<div class="image-slot"><img src="${esc(resolveUrl(q.img))}" alt="Question illustration" loading="lazy" data-question-img><span class="image-error" hidden>Image unavailable</span><button type="button" class="image-zoom" aria-label="Zoom in image" data-image-zoom>⊕</button></div>`:""}${q.au? q.au.startsWith("tts:")?"<p>Japanese speech audio</p>":`<audio controls preload="none" src="${esc(resolveUrl(q.au))}"></audio>`:""}`;}
+
+function openQuestionReport() {
+  const exam = state.practice || state.exam;
+  const section = exam?.sections[exam.si];
+  const question = section?.questions[exam.qi];
+  if (!question || !state.user) return;
+  const ref = doc(collection(db, "questionReports"));
+  const uid = state.user.uid;
+  const questionNumber = exam.qi + 1;
+  modal("Report this question", `
+    <p>Set ${question.set} · ${esc(section.name)} · Q${questionNumber}</p>
+    <label class="field mt-2">What needs fixing?
+      <textarea id="reportReason" class="input" maxlength="1000" rows="3" required></textarea>
+    </label><p class="muted small">Your report goes to the Dream Japan admin dashboard.</p>`,
+    [{label: "Cancel", cls: "btn-ghost"}, {label: "Submit report", keepOpen: true, onClick: async () => {
+      const reason = $("reportReason")?.value.trim();
+      if (!reason) return toast("Describe the issue first", "warn");
+      if (state.user?.uid !== uid) return toast("Please sign in again", "err");
+      try {
+        await setDoc(ref, {
+          uid, email: state.user.email || "", setIdx: Number(question.set),
+          section: section.key, questionId: String(question.id || "").slice(0, 160), questionNumber,
+          question: String(question.q || "").slice(0, 500), reason, status: "open",
+          createdAt: serverTimestamp()
+        });
+        if ($("reportReason")) closeModal();
+        clearFastReads("adminOpenReports");
+        toast("Report submitted to the admin", "ok");
+      } catch (error) {
+        toast("Could not submit report. Please try again.", "err");
+        console.warn("Question report", error);
+      }
+    }}]);
+}
+
 function bindMedia(){
  prefetchUpcoming();
  document.querySelectorAll("[data-image-zoom]").forEach(b=>b.onclick=()=>{const img=b.parentElement.querySelector("img");if(img?.naturalWidth)openImageZoom(img.src);});
- document.querySelectorAll("[data-report]").forEach(b=>b.onclick=()=>{
- const ex=state.practice||state.exam,sec=ex?.sections[ex.si],q=sec?.questions[ex.qi];if(!q)return;
- modal("Report this question",`<p>Set ${q.set} · ${esc(sec.name)} · Q${ex.qi+1}</p><textarea id="reportReason" class="input" maxlength="1000" placeholder="Describe the issue with this question"></textarea><p class="muted small">Copy your report or open WhatsApp to review and send it to the admin.</p>`,[{label:"Close",cls:"btn-ghost"},{label:"Copy report",keepOpen:true,onClick:()=>copyText(reportText())},{label:"Open WhatsApp",keepOpen:true,onClick:()=>{const number=String(appConfig.whatsappNumber||"").replace(/\D/g,"");if(!number)return toast("Admin contact is unavailable. Copy your report instead.","warn");window.open(`https://wa.me/${number}?text=${encodeURIComponent(reportText())}`,"_blank","noopener,noreferrer");}}]);
- function reportText(){return `Dream Japan question report\nSet ${q.set} · ${sec.name} · Q${ex.qi+1}\nID: ${q.id||""}\n${q.q}\nIssue: ${$("reportReason")?.value||""}`;}
- });
+
+ document.querySelectorAll("[data-report]").forEach(button => button.onclick = openQuestionReport);
  document.querySelectorAll("[data-question-img]").forEach(img=>{img.onerror=()=>{img.style.visibility="hidden";const e=img.parentElement.querySelector(".image-error");if(e)e.hidden=false;};});
  document.querySelectorAll("[data-bookmark]").forEach(b=>{
   const ex=state.practice||state.exam, sec=ex?.sections[ex.si], q=sec?.questions[ex.qi];
