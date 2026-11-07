@@ -10,7 +10,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc,
-  collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy, limit, runTransaction, deleteDoc, writeBatch, getCountFromServer, getAggregateFromServer, sum
+  collection, query, where, getDocs, addDoc, serverTimestamp, onSnapshot, orderBy, limit, runTransaction, deleteDoc, writeBatch, getCountFromServer
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
@@ -1206,13 +1206,14 @@ function actionIcon(name) {
     leaderboard: '<path d="M8 21h8M12 17v4M7 4h10v7a5 5 0 0 1-10 0V4ZM7 6H3v2a4 4 0 0 0 4 4m10-6h4v2a4 4 0 0 1-4 4"/>',
     premium: '<path d="m3 7 5 5 4-7 4 7 5-5-2 12H5z"/>',
     logout: '<path d="M10 4H4v16h6m-1-8h12m-4-4 4 4-4 4"/>',
-    history: '<path d="M3 12a9 9 0 1 1 2.6 6.4M3 5v7h7m2-5v5l3 2"/>'
+    history: '<path d="M3 12a9 9 0 1 1 2.6 6.4M3 5v7h7m2-5v5l3 2"/>',
+    support: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 9.5c.5 2.5 2 4 4.5 4.5l1-1 2 1c-.3 1-1 1.5-2 1.5-3.5 0-6.5-3-6.5-6.5 0-1 .5-1.7 1.5-2l1 2-1 1Z"/>'
   };
   return `<svg aria-hidden="true" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
 }
 
 function profileAction(name, label, detail = "") {
-  const action = name === "logout" ? 'id="logoutBtn"' : `data-go="${name}"`;
+  const action = name === "logout" ? 'id="logoutBtn"' : name === "support" ? 'id="supportBtn"' : `data-go="${name}"`;
   return `<button type="button" class="profile-action profile-action-${name}" ${action}>
     <span class="profile-action-icon">${actionIcon(name)}</span>
     <strong>${label}</strong>${detail ? `<span class="profile-action-detail">${detail}</span>` : ""}
@@ -1256,6 +1257,7 @@ function renderProfile() {
       ${profileAction("bookmarks", "My Bookmarks", (p.bookmarks || []).length || "")}
       ${profileAction("leaderboard", "Leaderboard")}
       ${profileAction("premium", "View Premium Plans")}
+      ${profileAction("support", "WhatsApp Support", "Chat with us")}
       ${profileAction("logout", "Logout")}
     </div>
   </div>${bottomNavHTML("profile")}`;
@@ -1382,9 +1384,9 @@ function adminOverviewHTML() {
     <button class="stat-card" data-stat="statOnline" data-admin-tab="students"><div class="num" id="statOnline">…</div><div class="lbl">Online students</div><small>Seen in the last 7 min</small></button>
     <button class="stat-card" data-stat="statToday" data-admin-tab="students"><div class="num" id="statToday">…</div><div class="lbl">Premium started today</div><small>Nepal time</small></button>
     <button class="stat-card" data-stat="statExpired" data-admin-tab="students"><div class="num" id="statExpired">…</div><div class="lbl">Premium expired</div></button>
-    <div class="stat-card"><div class="num" id="statAvgTime">…</div><div class="lbl">Average exam time</div><small>Latest saved result per set</small></div>
     <button class="stat-card" data-admin-tab="reports"><div class="num" id="statReports">…</div><div class="lbl">Open question reports</div></button>
   </div>
+  <p class="muted small" id="statsLoadMessage" role="status" hidden></p>
   <div class="card mt-2"><h3 class="mb-1">Quick Actions</h3>
     <div class="grid-2">
       <button class="btn btn-primary btn-sm" data-admin-tab="students">Students</button>
@@ -1566,6 +1568,13 @@ function postRender() {
 
   const logoutBtn = $("logoutBtn");
   if (logoutBtn) logoutBtn.onclick = logout;
+  const supportBtn = $("supportBtn");
+  if (supportBtn) supportBtn.onclick = () => {
+    const number = String(appConfig.whatsappNumber || "").replace(/\D/g, "");
+    if (!number) return toast("WhatsApp support number is not configured.", "err");
+    const message = `नमस्ते Dream Japan Support, मलाई JFT Mock Test सम्बन्धमा सहयोग चाहिएको छ।\nनाम: ${state.profile?.name || ""}\nईमेल: ${state.profile?.email || state.user?.email || ""}`;
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+  };
 
   document.querySelectorAll("[data-plan]").forEach(el => {
     el.onclick = () => requestPremium(el.dataset.plan);
@@ -2118,7 +2127,7 @@ function bindAdminTab() {
   if (adminTab === "overview") {
     loadStats();
     $("refreshStats").onclick = () => {
-      clearFastReads("adminUsers", "pendingRequests", "adminExamTime", "adminOpenReports");
+      clearFastReads("adminUsers", "pendingRequests", "adminOpenReports");
       return loadStats();
     };
     const rb = $("refreshQBtn");
@@ -2167,37 +2176,41 @@ function premiumStartedToday(user) {
 }
 
 async function loadStats() {
-  const sources = await Promise.allSettled([
-    memoRead("adminUsers", () => getDocs(collection(db, "users"))),
-    memoRead("pendingRequests", () => getCountFromServer(query(collection(db, "accessRequests"), where("status", "==", "pending")))),
-    readQuestionRows(),
-    memoRead("adminExamTime", () => getAggregateFromServer(collection(db, "leaderboard"), {
-      sets: sum("setCount"), seconds: sum("totalTimeUsed")
-    })),
-    memoRead("adminOpenReports", () => getCountFromServer(query(collection(db, "questionReports"), where("status", "==", "open"))))
-  ]);
+  const failed = new Set();
+  const jobs = [];
+  const status = $("statsLoadMessage");
+  const ids = ["statTotal", "statActive", "statBlocked", "statPremium", "statPending", "statQuestions", "statOnline", "statToday", "statExpired", "statReports"];
+  ids.forEach(id => { if ($(id)) $(id).textContent = "…"; });
+  if (status) { status.hidden = true; status.textContent = ""; }
   function show(id, value) {
     if ($(id)) $(id).textContent = value ?? "—";
   }
-  const [students, requests, questions, timing, reports] = sources.map(result => result.value);
-  const users = students?.docs.filter(entry => entry.id !== state.user?.uid).map(entry => entry.data());
-  show("statTotal", users?.length);
-  show("statActive", users?.filter(user => user.status === "active").length);
-  show("statBlocked", users?.filter(user => user.status === "blocked").length);
-  show("statPremium", users?.filter(activeProfile).length);
-  show("statOnline", users?.filter(isOnlineStudent).length);
-  show("statToday", users?.filter(premiumStartedToday).length);
-  show("statExpired", users?.filter(user => {
-    const expiry = membershipUntil(user.premium?.expiry);
-    return expiry > 0 && expiry <= Date.now();
-  }).length);
-  show("statPending", requests?.data().count);
-  show("statQuestions", questions?.length);
-  show("statReports", reports?.data().count);
-  const time = timing?.data();
-  show("statAvgTime", time?.sets ? audioClock(Math.round(time.seconds / time.sets)) : null);
-  if (sources.some(result => result.status === "rejected") && state.screen === "admin" && adminTab === "overview") {
-    toast("Some dashboard stats could not load. Refresh to retry.", "warn");
+  function track(key, promise, render) {
+    jobs.push(Promise.resolve(promise).then(render).catch(error => {
+      failed.add(key);
+      console.warn(`Admin overview ${key} failed`, error);
+    }));
+  }
+  track("students", memoRead("adminUsers", () => getDocs(collection(db, "users"))), snap => {
+    const users = snap.docs.filter(entry => entry.id !== state.user?.uid).map(entry => entry.data());
+    show("statTotal", users.length);
+    show("statActive", users.filter(user => user.status === "active").length);
+    show("statBlocked", users.filter(user => user.status === "blocked").length);
+    show("statPremium", users.filter(activeProfile).length);
+    show("statOnline", users.filter(isOnlineStudent).length);
+    show("statToday", users.filter(premiumStartedToday).length);
+    show("statExpired", users.filter(user => {
+      const expiry = membershipUntil(user.premium?.expiry);
+      return expiry > 0 && expiry <= Date.now();
+    }).length);
+  });
+  track("requests", memoRead("pendingRequests", () => getCountFromServer(query(collection(db, "accessRequests"), where("status", "==", "pending")))), snap => show("statPending", snap.data().count));
+  track("questions", readQuestionRows(), rows => show("statQuestions", rows.length));
+  track("reports", memoRead("adminOpenReports", () => getCountFromServer(query(collection(db, "questionReports"), where("status", "==", "open")))), snap => show("statReports", snap.data().count));
+  await Promise.all(jobs);
+  if (failed.size && status && state.screen === "admin" && adminTab === "overview") {
+    status.textContent = "Some values are unavailable. Check the related Firestore access and tap Refresh stats.";
+    status.hidden = false;
   }
 }
 async function loadStudents() {
