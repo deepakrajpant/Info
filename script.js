@@ -763,7 +763,7 @@ function render() {
   else html = renderHomeScreen();
 
   root.innerHTML = html;
-  postRender();bindMedia();updateInstallBanner();bindFastButtons(root);
+  postRender();bindMedia();updateInstallBanner();bindFastButtons(root);bindAddedFeatures();updateRenewalNotice();
 }
 
 function topbarHTML() {
@@ -829,77 +829,47 @@ function renderSignup() {
   </div></div>`;
 }
 
+function homeIcon(key) {
+  const paths = {
+    arrow:'M5 12h14m-6-6 6 6-6 6',
+    book:'M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-2H4V4Zm9 3a3 3 0 0 1 3-3h4v15h-4a4 4 0 0 0-3 2',
+    chart:'M4 19h16M7 15v-4m5 4V5m5 10V8',
+    bookmark:'M6 3h12v18l-6-4-6 4V3Z',
+    trophy:'M8 3h8v6a4 4 0 0 1-8 0V3Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v6m-4 2h8',
+    crown:'m3 6 5 5 4-7 4 7 5-5-2 14H5L3 6Z',
+    calendar:'M5 5h14v16H5V5Zm3-3v6m8-6v6M5 11h14m-10 4h2',
+    layers:'m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5',
+    sparkle:'m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3Z',
+    check:'m5 12 4 4L19 6'
+  };
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[key]||paths.arrow}"/></svg>`;
+}
 function renderHomeScreen() {
   const p = state.profile || {};
-  const results = state.results || [];
-  const completed = results.reduce((sum, row) => sum + (row.attemptCount || 1), 0);
-  const best = completed ? Math.max(...results.map(r => r.percentage || 0)) : 0;
-  const premiumActive = p.premium && daysLeft(p.premium.expiry) > 0;
-  const hasAccess = premiumActive || state.isAdmin;
-  const streak = (p.streak && p.streak.count) || 0;
+  const results = latestBySet(state.results || []);
+  const attempts = results.reduce((sum, row) => sum + (row.attemptCount || 1), 0);
+  const best = results.length ? Math.max(...results.map(r => Number(r.percentage) || 0)) : null;
+  const active = !!(p.premium && daysLeft(p.premium.expiry) > 0);
+  const hasAccess = active || state.isAdmin;
+  const streak = Number(p.streak?.count) || 0;
+  return `<div class="home-shell">${topbarHTML()}<main class="home-main">
+    <header class="home-intro"><div><p class="home-kicker">JFT-BASIC</p><h2>Let’s <span>practise.</span></h2></div><span class="home-member ${hasAccess ? "is-premium" : ""}">${homeIcon(hasAccess ? "crown" : "book")}${state.isAdmin ? "Admin access" : active ? "Premium member" : "Student account"}</span></header>
+    <section class="home-quick-stats" aria-label="Your practice overview"><div><span class="home-stat-icon">${homeIcon("layers")}</span><p><strong>${results.length}<small> / ${SET_NAMES.length}</small></strong><span>Sets completed</span></p></div><div><span class="home-stat-icon">${homeIcon("book")}</span><p><strong>${attempts}</strong><span>Total attempts</span></p></div><div><span class="home-stat-icon">${homeIcon("trophy")}</span><p><strong>${best === null ? "—" : best + "%"}</strong><span>Best score</span></p></div></section>
+    <section class="home-tests" aria-labelledby="homeTestsTitle"><div class="home-section-title"><div><h3 id="homeTestsTitle">Mock tests</h3></div></div><div class="home-collections">
+      <button type="button" class="home-series-button" id="upcomingMockButton"><span class="home-collection-icon">${homeIcon("calendar")}</span><span class="home-collection-copy"><strong>December – January Mock Test</strong></span><span class="home-collection-end"><span class="home-status home-status-soon">Coming soon</span><span class="home-collection-arrow">${homeIcon("arrow")}</span></span></button>
+      <button type="button" class="home-series-button" data-go="sets"><span class="home-collection-icon">${homeIcon("book")}</span><span class="home-collection-copy"><strong>October – November Mock Test</strong></span><span class="home-collection-end"><span class="home-status home-status-live">Available</span><span class="home-collection-arrow">${homeIcon("arrow")}</span></span></button>
+      <button type="button" class="home-series-button" data-go="past-sets"><span class="home-collection-icon">${homeIcon("layers")}</span><span class="home-collection-copy"><strong>Past Mock Tests</strong></span><span class="home-collection-end"><span class="home-status home-status-library">Explore sets</span><span class="home-collection-arrow">${homeIcon("arrow")}</span></span></button>
+    </div></section>
+    <section class="home-progress-cta" aria-labelledby="homeProgressTitle"><div class="home-progress-mark">${homeIcon("chart")}</div><div class="home-progress-copy"><h3 id="homeProgressTitle">Your progress</h3><p>Results, weak areas &amp; tips.</p></div><button type="button" class="home-progress-button" id="homeProgressButton">View progress${homeIcon("arrow")}</button></section>
+    <section class="home-toolkit" aria-labelledby="homeToolkitTitle"><div class="home-section-title"><div><h3 id="homeToolkitTitle">Quick access</h3></div>${streak > 0 ? `<span class="home-streak">${streak}-day streak</span>` : ""}</div><div class="home-tools-grid">${[
+      ["practice","book","Quick practice","Focus on one skill"],
+      ["bookmarks","bookmark","Bookmarks",`${(p.bookmarks || []).length} saved questions`],
+      ["leaderboard","trophy","Leaderboard","See how you compare"],
+      ["premium","crown","Premium",active ? `${daysLeft(p.premium.expiry)} days remaining` : "Explore premium plans"]
+    ].map(([go,icon,title,description])=>`<button type="button" class="home-tool" data-go="${go}"><span class="home-tool-icon">${homeIcon(icon)}</span><span class="home-tool-copy"><strong>${title}</strong><span>${description}</span></span><span class="home-tool-arrow">${homeIcon("arrow")}</span></button>`).join("")}</div></section>
+    ${!hasAccess ? `<aside class="home-access"><span class="home-access-icon">${homeIcon("crown")}</span><div><h3>Unlock Premium</h3><p>All mock tests &amp; practice.</p></div><div class="home-access-actions"><button type="button" class="btn btn-prem btn-sm" data-go="premium">View plans${homeIcon("arrow")}</button><button type="button" class="home-text-button" id="reqAccessBtn">Request access</button></div></aside>` : ""}
 
-  return `${topbarHTML()}<div class="wrap">
-    <div class="hero" data-go="sets">
-      <small>JFT-BASIC · PRACTICE SERIES</small>
-    <h2>Mock Test 2026</h2>
-<p><strong>OCTOBER–NOVEMBER IMPORTANT SETS</strong><br>
-Your Next Step Towards JFT Success.</p>
-<div class="hero-stats">
-  <div><strong>6</strong><span>Sets</span></div>
-        <div><strong>${completed}</strong><span>Completed</span></div>
-        <div><strong>${completed ? best + "%" : "–"}</strong><span>Best %</span></div>
-      </div>
-      <div class="hero-cta">Start practising →</div>
-    </div>
-    ${streak > 0 ? `<div class="streak-banner"><div class="fire"></div><div style="flex:1"><h4>${streak}-day streak!</h4><p>Keep it up — practice daily to improve faster.</p></div></div>` : ""}
-    <button type="button" class="past-home-card" data-go="past-sets"><span class="past-home-icon">▧</span><span class="past-home-copy"><strong>Past JFT Mock Test Sets</strong><small>Explore previous practice sets</small></span><span class="past-home-arrow">→</span></button>
-    ${!hasAccess ? `<div class="card mt-2" style="background:#fef3c7;border-color:var(--orange)">
-      <div class="flex" style="align-items:flex-start">
-        <div style="font-size:28px"></div>
-        <div style="flex:1">
-          <h3 style="margin-bottom:6px">Access Required</h3>
-          <p class="muted" style="margin-bottom:12px">You need premium to take tests.</p>
-          <div class="flex" style="gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary btn-sm" data-go="premium">View Plans</button>
-            <button class="btn btn-ghost btn-sm" id="reqAccessBtn">Request Access</button>
-          </div>
-        </div>
-      </div>
-    </div>` : ""}
-    <div class="grid-2 mt-2">
-      <div class="card" style="cursor:pointer;text-align:center" data-go="practice">
-        <div style="font-size:28px;margin-bottom:6px"></div>
-        <h4 style="font-size:13px">Quick Practice</h4><p class="muted small">Pick a section</p>
-      </div>
-      <div class="card" style="cursor:pointer;text-align:center" data-go="bookmarks">
-        <div style="font-size:28px;margin-bottom:6px"></div>
-        <h4 style="font-size:13px">Bookmarks</h4><p class="muted small">${(p.bookmarks || []).length} saved</p>
-      </div>
-      <div class="card" style="cursor:pointer;text-align:center" data-go="leaderboard">
-        <div style="font-size:28px;margin-bottom:6px"></div>
-        <h4 style="font-size:13px">Leaderboard</h4><p class="muted small">Top students</p>
-      </div>
-      <div class="card" style="cursor:pointer;text-align:center" data-go="premium">
-        <div style="font-size:28px;margin-bottom:6px"></div>
-        <h4 style="font-size:13px">Premium</h4>
-        <p class="muted small">${premiumActive ? daysLeft(p.premium.expiry) + "d left" : "View plans"}</p>
-      </div>
-    </div>
-    <div class="card mt-2">
-      <div class="flex-between mb-2">
-        <h3>Recent Activity</h3>
-        <button class="btn btn-ghost btn-sm" data-go="profile">Profile →</button>
-      </div>
-      ${completed ? results.slice(0, 3).map(r => `
-        <div class="flex-between" style="padding:10px 0;border-bottom:1px solid var(--border)">
-          <div><h4>Set ${r.setIdx} · ${esc(r.setName || "—")}</h4><p class="muted small">${fmtDate(r.submittedAt)}</p></div>
-          <div style="text-align:right">
-            <div style="font-size:18px;font-weight:900;color:${r.percentage >= 80 ? "var(--green)" : "var(--orange)"}">${r.percentage}%</div>
-            <div class="muted small">${Math.round(r.score)}/${r.maxScore}</div>
-          </div>
-        </div>`).join("") : `<p class="muted center" style="padding:24px 0">No attempts yet. Start your first exam!</p>`}
-    </div>
-  </div>${bottomNavHTML("home")}`;
+  </main>${bottomNavHTML("home")}</div>`;
 }
 
 
@@ -1267,7 +1237,7 @@ function renderPremium() {
  const p=state.profile||{}, active=p.premium && daysLeft(p.premium.expiry)>0;
  return `${topbarHTML()}<main class="wrap page-space"><div class="premium-status"><p>YOUR NEXT STEP</p><h2>Practice with confidence</h2><p>All sets, listening practice and progress in one place.</p></div>
  ${p.premium?`<div class="card mt-2"><h3>${active?"Active":"Expired"}: ${esc(p.premium.plan)}</h3><p>${fmtDate(p.premium.start)} to ${fmtDate(p.premium.expiry)} · ${daysLeft(p.premium.expiry)} days remaining</p><p class="muted">Access is tied to the browser used for payment.</p></div>`:""}
- <h3 class="mt-3 mb-2">Available plans</h3>${state.plans.length?state.plans.filter(pl=>pl.active!==false).map(pl=>`<article class="plan-card"><div class="flex-between"><h3>${esc(pl.name)}</h3><div><b class="price">NPR ${Number(pl.price||0).toLocaleString()}</b><p>${Number(pl.days)} days</p></div></div><ul class="benefits">${(pl.benefits||[]).map(b=>`<li>${esc(b)}</li>`).join("")}</ul><button class="btn btn-primary btn-block mt-2" data-plan="${esc(pl.id)}">${active?"Extend or choose plan":"Select plan"}</button></article>`).join(""):"<div class='card'>No plans available. Please contact the admin.</div>"}
+ ${renewalEligible()?`<div class="renewal-offer mt-2"><span class="badge badge-prem">LOYALTY REWARD · 40% OFF</span><h3>Premium लिइसक्नुभएको छ? सस्तोमा renew गर्नुहोस्।</h3><p>तलको plan छान्नुहोस् र WhatsApp बाट discounted renewal माग्नुहोस्। Admin verification required.</p></div>`:""}<h3 class="mt-3 mb-2">Available plans</h3>${state.plans.length?state.plans.filter(pl=>pl.active!==false).map(pl=>`<article class="plan-card"><div class="flex-between"><h3>${esc(pl.name)}</h3><div><b class="price">NPR ${Number(pl.price||0).toLocaleString()}</b><p>${Number(pl.days)} days</p></div></div><ul class="benefits">${(pl.benefits||[]).map(b=>`<li>${esc(b)}</li>`).join("")}</ul>${renewalEligible()?`<div class="renewal-plan-price"><span class="badge badge-success">40% OFF RENEWAL</span><strong>NPR ${renewalPrice(pl).toLocaleString()}</strong><small>Regular price: NPR ${Number(pl.price||0).toLocaleString()}</small></div><button class="btn btn-teal btn-block mt-2" data-renew-plan="${esc(pl.id)}">Renew on WhatsApp · Save 40%</button>`:""}<button class="btn ${renewalEligible()?"btn-ghost":"btn-primary"} btn-block mt-2" data-plan="${esc(pl.id)}">${renewalEligible()?"Standard-price eSewa payment":active?"Extend or choose plan":"Select plan"}</button></article>`).join(""):"<div class='card'>No plans available. Please contact the admin.</div>"}
  <div class="card"><p>Payment is verified manually. A request does not activate premium automatically.</p></div></main>${bottomNavHTML("premium")}`;
 }
 
@@ -2950,7 +2920,118 @@ function editPlan(id){const p=state.plans.find(p=>p.id===id)||{name:"",price:500
 window.addEventListener("unhandledrejection",e=>{console.error(e.reason);toast(e.reason?.message||"Request failed. Please retry.","err");});
 window.addEventListener("offline",()=>toast("Connection lost. Current media may remain available; reconnect to save results.","warn"));
 
+/* Requested additions: renewal, upcoming series and home learning insights. */
+function renewalEligible(profile = state.profile) {
+  return !!state.user && !state.isAdmin && profile?.status !== "blocked" &&
+    !!profile?.premium && Number.isFinite(membershipUntil(profile.premium.expiry)) &&
+    membershipUntil(profile.premium.expiry) > 0;
+}
+function renewalPrice(plan) {
+  return Math.round(Number(plan.price) * 60) / 100;
+}
+function renewalNoticeHTML() {
+  if (!renewalEligible() || membershipUntil(state.profile.premium.expiry) > Date.now()) return "";
+  return `<aside id="renewalNotice" class="renewal-notice wrap" aria-label="Premium expiry notification"><div><span class="badge badge-danger">Premium expired</span><h3>Your next chapter starts with 40% off</h3><p>${state.screen === "home" ? `Your premium expired on ${esc(fmtDate(state.profile.premium.expiry))}. Renew with your 40% returning-member discount.` : `तपाईंको premium ${esc(fmtDate(state.profile.premium.expiry))} मा सकिएको छ। पुरानो सदस्य भएकाले renewal मा 40% छुट पाउनुहोस्।`}</p></div><button class="btn btn-prem" id="renewFromNotice">Renew · Save 40% →</button></aside>`;
+}
+function updateRenewalNotice() {
+  const existing = document.getElementById("renewalNotice");
+  if (!state.user || ["exam", "practice", "loading", "admin"].includes(state.screen)) { existing?.remove(); return; }
+  const html = renewalNoticeHTML();
+  if (!html) { existing?.remove(); return; }
+  if (!existing) document.querySelector("#app .topbar")?.insertAdjacentHTML("afterend", html);
+  if ($("renewFromNotice")) $("renewFromNotice").onclick = () => navigate("premium");
+  const key = `dj_expiry_notice_${state.user.uid}_${membershipUntil(state.profile.premium.expiry)}`;
+  let shown = state._expiryNoticeKey === key;
+  try { shown ||= sessionStorage.getItem(key) === "1"; } catch {}
+  if (!shown) {
+    state._expiryNoticeKey = key;
+    try { sessionStorage.setItem(key, "1"); } catch {}
+    toast("Your premium has expired. Renew with 40% off on WhatsApp.", "warn");
+  }
+}
+async function openRenewal(planId) {
+  if (!renewalEligible()) return toast("A previous premium membership is required for this offer.", "warn");
+  const plan = state.plans.find(p => p.id === planId && p.active !== false);
+  if (!plan || !Number.isFinite(Number(plan.price)) || Number(plan.price) < 0) return toast("This plan is unavailable.", "warn");
+  const uid = state.user.uid;
+  const discounted = renewalPrice(plan);
+  modal("40% off your premium renewal", `<p>Preparing your WhatsApp renewal message…</p>`);
+  try {
+    const config = await memoRead("config", () => getDoc(doc(db, "appConfig", "main")), 30000);
+    if (config.exists()) appConfig = {...appConfig, ...config.data()};
+  } catch {
+    if (state.user?.uid === uid && $("modal").classList.contains("show")) modal("Please reconnect", "Could not load the admin WhatsApp number. Please reconnect and try again.");
+    return;
+  }
+  if (state.user?.uid !== uid || !renewalEligible() || !$("modal").classList.contains("show")) return;
+  const number = String(appConfig.whatsappNumber || "").replace(/\D/g, "");
+  if (!/^\d{7,15}$/.test(number)) return modal("Contact admin", "The admin needs to configure a valid WhatsApp number in Settings.");
+  const message = `नमस्ते Dream Japan! म पुरानो premium सदस्य हुँ र 40% discount मा renew गर्न चाहन्छु।\nName: ${state.profile.name || "Student"}\nEmail: ${state.user.email || ""}\nStudent ID: ${uid}\nPrevious plan: ${state.profile.premium.plan || "Premium"}\nPremium expiry: ${fmtDate(state.profile.premium.expiry)}\nRenewal plan: ${plan.name}\nDuration: ${Number(plan.days)} days\nRegular price: NPR ${Number(plan.price)}\nRenewal discount: 40%\nRenewal amount: NPR ${discounted}\nकृपया मेरो पुरानो membership verify गरेर renewal payment details पठाइदिनुहोस्।`;
+  modal("Your 40% renewal offer", `<div class="renewal-offer"><span class="badge badge-prem">SAVE 40%</span><h2>${esc(plan.name)}</h2><p><s>NPR ${Number(plan.price).toLocaleString()}</s> <strong>NPR ${discounted.toLocaleString()}</strong></p><p>${Number(plan.days)} days access</p></div><a class="btn btn-teal btn-block mt-2" target="_blank" rel="noopener noreferrer" href="https://wa.me/${number}?text=${encodeURIComponent(message)}">Continue on WhatsApp →</a><p class="muted small mt-2">Review and send in WhatsApp. Admin approval required.</p>`, [{label:"Cancel", cls:"btn-ghost"}]);
+}
+function openUpcomingMock() {
+  modal("December – January Mock Test", `<div class="upcoming-preview"><span class="upcoming-orbit" aria-hidden="true">✦</span><span class="badge badge-info">NEXT PRACTICE SERIES</span><h2>Great practice.<br>New possibilities.</h2><div class="upcoming-pill">COMING SOON</div><p>Your next practice series is on its way.<br>Check back here for December – January mock tests.</p><div class="upcoming-topics"><span>Vocabulary</span><span>Conversation</span><span>Listening</span><span>Reading</span></div><p class="small">Keep building your confidence with the current practice sets.</p></div>`, [{label:"Keep practising →", onClick:()=>navigate("sets")}, {label:"Close", cls:"btn-ghost"}]);
+}
+function learningSummary(rows = state.results || []) {
+  const latest = latestBySet(rows);
+  const sections = SECTIONS.map(meta => {
+    let correct = 0, total = 0, samples = 0, score = 0, max = 0;
+    latest.forEach(row => {
+      const section = (row.sections || []).find(s => s.key === meta.key || s.name === meta.name || s.short === meta.short);
+      if (!section) return;
+      const items = Array.isArray(section.items) ? section.items : [];
+      if (items.length) {
+        correct += items.filter(it => it.yourAns != null && it.yourAns === it.correctAns).length;
+        total += items.length;
+      } else if (Number.isFinite(Number(section.score)) && Number(section.max) > 0) {
+        score += Number(section.score); max += Number(section.max);
+      }
+      if (items.length || Number(section.max) > 0) samples++;
+    });
+    // Score-only legacy results are converted to question-equivalent counts using section marks.
+    const equivalentTotal = total + max / meta.marks;
+    const equivalentCorrect = correct + score / meta.marks;
+    const percent = equivalentTotal > 0 ? Math.min(100, Math.max(0, Math.round(equivalentCorrect / equivalentTotal * 100))) : null;
+    return {...meta, percent, samples, total};
+  });
+  const scored = latest.filter(r => Number.isFinite(Number(r.score)) && Number(r.maxScore) > 0);
+  const max = scored.reduce((sum, r) => sum + Number(r.maxScore), 0);
+  const average = max ? Math.round(scored.reduce((sum, r) => sum + Number(r.score), 0) / max * 100) : null;
+  return {latest, sections, average};
+}
+function renderLearningSummary() {
+  const {latest, sections, average} = learningSummary();
+  const tips = {
+    sv: "Review scripts and everyday vocabulary. Make flashcards for missed words.",
+    ce: "Practise everyday dialogues and response patterns. Read examples aloud.",
+    lc: "Listen for time, place and key details. Replay audio to check missed words.",
+    rc: "Read short notices and messages. Look for keywords, dates and times."
+  };
+  const measured = sections.filter(s => s.percent !== null).sort((a,b) => a.percent - b.percent);
+  const weak = measured.filter(s => s.percent < 80);
+  const priorities = weak.slice(0,2);
+  return `<section class="card learning-summary mt-2" aria-labelledby="learningSummaryTitle"><div class="flex-between"><div><h3 id="learningSummaryTitle">Latest results</h3></div><span class="badge badge-info">${latest.length}/${SET_NAMES.length} sets</span></div><p class="muted small mt-1">Latest attempt per set · Target: 80%.</p>${!latest.length ? `<div class="learning-empty"><b>Your progress starts here</b><p class="muted">Complete a mock test to see your results, weak areas and next steps.</p><button class="btn btn-primary btn-sm mt-2" data-go="sets">Start a mock test →</button></div>` : `<div class="learning-stats"><div><strong>${average === null ? "—" : average + "%"}</strong><span>Overall score</span></div><div><strong>${latest.filter(r=>Number(r.percentage)>=80).length}/${latest.length}</strong><span>Sets at target</span></div><div><strong>${weak.length}</strong><span>Sections to improve</span></div></div><div class="learning-section-list">${sections.map(s=>`<article class="learning-section"><div class="flex-between"><b>${esc(s.short)}</b><span class="badge ${s.percent === null ? "badge-muted" : s.percent < 60 ? "badge-danger" : s.percent < 80 ? "badge-warn" : "badge-success"}">${s.percent === null ? "No data" : s.percent + "% · " + (s.percent < 60 ? "Focus first" : s.percent < 80 ? "Improve" : "On target")}</span></div><div class="learning-track" role="meter" aria-label="${esc(s.name)}" aria-valuemin="0" aria-valuemax="100" ${s.percent === null ? 'aria-valuetext="No data"' : `aria-valuenow="${s.percent}"`}><span style="width:${s.percent ?? 0}%;background:${s.percent < 60 ? "var(--red)" : s.percent < 80 ? "var(--amber)" : "var(--green)"}"></span></div></article>`).join("")}</div><div class="learning-advice"><h4>${priorities.length ? "Focus on these next" : measured.length ? "Good progress. Keep going." : "Section details not available"}</h4>${priorities.map(s=>`<p><b>${esc(s.short)}:</b> ${tips[s.key]}</p>`).join("")}${!priorities.length ? `<p>${measured.length ? "Your measured sections are on target. Try remaining sets and review missed questions." : "Complete another mock test to unlock section tips."}</p>` : ""}<button class="btn btn-ghost btn-sm mt-1" data-go="practice">Practise a section →</button></div>`}<details class="learning-sets" ><summary>Latest results by set</summary>${SET_NAMES.map((set,i)=>{const r=latest.find(row=>Number(row.setIdx)===i+1);return `<div class="learning-set-row"><span><b>Set ${i+1}</b> · ${esc(set.name)}</span>${r ? `<button class="btn btn-ghost btn-sm" data-summary-set="${i+1}">${Number(r.percentage)||0}% · View result →</button>` : `<span class="badge badge-muted">Not attempted</span>`}</div>`;}).join("")}</details></section>`;
+}
+function openLearningProgress() {
+  modal("Your learning progress", `<div class="progress-dialog">${renderLearningSummary()}</div>`, [{label:"Back", cls:"btn-ghost"}, {label:"Done", cls:"btn-primary"}]);
+  bindAddedFeatures();
+  $("modal").querySelectorAll("[data-go]").forEach(button => button.onclick = () => {closeModal();navigate(button.dataset.go);});
+}
+function bindAddedFeatures() {
+  if ($("homeProgressButton")) $("homeProgressButton").onclick=openLearningProgress;
+  document.querySelectorAll("[data-renew-plan]").forEach(b=>b.onclick=()=>openRenewal(b.dataset.renewPlan));
+  if ($("upcomingMockButton")) $("upcomingMockButton").onclick=openUpcomingMock;
+  document.querySelectorAll("[data-summary-set]").forEach(b=>b.onclick=()=>{
+    const result=(state.results||[]).find(r=>Number(r.setIdx)===Number(b.dataset.summarySet));
+    if (result) {closeModal();saveResult(result);navigate("result");}
+  });
+}
+
 /* ============ INIT ============ */
 clearQCache();
 initHistory();
 if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+
+// Refresh expiry notices while the app is open, and when returning to the tab.
+setInterval(updateRenewalNotice, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) updateRenewalNotice(); });
