@@ -1,0 +1,138 @@
+{
+  "document": "appConfig/mockTests",
+  "legacySplit": false,
+  "sets": {
+    "set_1": {
+      "name": "SHIMEMASU",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 1,
+      "access": "premium",
+      "isPublished": true,
+      "version": 0,
+      "questionCount": null
+    },
+    "set_2": {
+      "name": "HARE",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 2,
+      "access": "premium",
+      "isPublished": true,
+      "version": 0,
+      "questionCount": null
+    },
+    "set_3": {
+      "name": "GAKUSEI",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 3,
+      "access": "premium",
+      "isPublished": true,
+      "version": 0,
+      "questionCount": null
+    },
+    "set_4": {
+      "name": "ORIMASU",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 4,
+      "access": "premium",
+      "isPublished": true,
+      "version": 0,
+      "questionCount": null
+    },
+    "set_5": {
+      "name": "KONPYUTA",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 5,
+      "access": "premium",
+      "isPublished": true,
+      "version": 0,
+      "questionCount": null
+    },
+    "set_6": {
+      "name": "MAGARIMASU",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 6,
+      "access": "premium",
+      "isPublished": true,
+      "version": 0,
+      "questionCount": null
+    },
+    "set_7": {
+      "name": "SIFU",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 1,
+      "access": "premium",
+      "isPublished": false,
+      "version": 0,
+      "questionCount": 0
+    },
+    "set_8": {
+      "name": "OKIMAS",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 2,
+      "access": "premium",
+      "isPublished": false,
+      "version": 0,
+      "questionCount": 0
+    },
+    "set_9": {
+      "name": "KUTCHUSITA",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 3,
+      "access": "premium",
+      "isPublished": false,
+      "version": 0,
+      "questionCount": 0
+    },
+    "set_10": {
+      "name": "KUROI",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 4,
+      "access": "premium",
+      "isPublished": false,
+      "version": 0,
+      "questionCount": 0
+    },
+    "set_11": {
+      "name": "KHUDAMONO",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 5,
+      "access": "premium",
+      "isPublished": false,
+      "version": 0,
+      "questionCount": 0
+    },
+    "set_12": {
+      "name": "JITENSYA",
+      "duration": 60,
+      "totalMarks": 250,
+      "passMarks": 200,
+      "order": 6,
+      "access": "premium",
+      "isPublished": false,
+      "version": 0,
+      "questionCount": 0
+    }
+  }
+}

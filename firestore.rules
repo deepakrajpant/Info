@@ -12,6 +12,39 @@ service cloud.firestore {
    return signedIn()
     && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'active';
   }
+function catalogPath(){
+   return /databases/$(database)/documents/appConfig/mockTests;
+  }
+  function legacyMode(){
+   return !exists(catalogPath()) || get(catalogPath()).data.get('legacySplit', false) == false;
+  }
+  function setSettings(setId){
+   return get(catalogPath()).data.get('sets', {}).get(setId, {});
+  }
+  function octoberSet(setId){
+   return setId in ['set_1','set_2','set_3','set_4','set_5','set_6'];
+  }
+  function decemberSet(setId){
+   return setId in ['set_7','set_8','set_9','set_10','set_11','set_12'];
+  }
+  function memberAccess(meta){
+   return meta.get('access','premium') == 'free' ? activeAccount() : paid();
+  }
+  function canReadSet(setId){
+   return signedIn() && ((octoberSet(setId) && legacyMode() && paid())
+    || (setSettings(setId).get('isPublished', false) == true && memberAccess(setSettings(setId))));
+  }
+  function canReadBank(setId){
+   let meta = setSettings(setId);
+   return meta.get('isPublished', false) == true
+    && meta.get('version', -1) == resource.data.version && memberAccess(meta);
+  }
+  function leaderboardPath(uid, group){
+   return /databases/$(database)/documents/$(group)/$(uid);
+  }
+  function resultGroup(setId){
+   return octoberSet(setId) ? 'leaderboard' : 'leaderboardDecJan';
+  }
   function paid(){
    let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
    return signedIn() && u.status == 'active'
@@ -32,54 +65,140 @@ service cloud.firestore {
     && d.deviceId is string && d.deviceId.size() == 64
     && d.createdAt == request.time;
   }
-  function validResult(d, attemptId){
-   return d.keys().hasOnly(['cloudSaved','attemptId','answers','setIdx','setName','score','maxScore','percentage','correct','wrong','unanswered','sections','timeUsed','startedAt','submittedAt','scoreSource'])
-    && d.attemptId == attemptId && d.scoreSource == 'browser'
-    && d.cloudSaved == true && d.maxScore == 250
-    && d.score is number && d.score >= 0 && d.score <= 250
+  function validLatestResult(d, setId){
+   return d.keys().hasOnly(['cloudSaved','attemptId','attemptCount','setIdx','setName','score','maxScore','percentage','correct','wrong','unanswered','sections','timeUsed','startedAt','submittedAt','savedAt','scoreSource','passMarks'])
+    && d.attemptId is string && d.attemptId.size() > 0 && d.attemptId.size() <= 120
+    && d.attemptCount is int && d.attemptCount >= 1
+    && d.scoreSource == 'browser' && d.cloudSaved == true
+    && d.maxScore is int && d.maxScore > 0 && d.maxScore <= 1000
+    && d.get('passMarks', 200) is int && d.get('passMarks', 200) >= 0 && d.get('passMarks', 200) <= d.maxScore
+    && d.score is number && d.score >= 0 && d.score <= d.maxScore
     && d.percentage is int && d.percentage >= 0 && d.percentage <= 100
-    && d.setIdx is int && d.setIdx >= 1 && d.setIdx <= 6
+    && d.percentage * d.maxScore - d.maxScore * 0.5 <= d.score * 100
+    && d.score * 100 < d.percentage * d.maxScore + d.maxScore * 0.5
+    && d.setIdx is int && d.setIdx >= 1 && d.setIdx <= 12
+    && setId == ['set_1','set_2','set_3','set_4','set_5','set_6','set_7','set_8','set_9','set_10','set_11','set_12'][d.setIdx - 1]
+    && d.setName is string && d.setName.size() <= 100
     && d.correct is int && d.correct >= 0 && d.wrong is int && d.wrong >= 0
     && d.unanswered is int && d.unanswered >= 0
-    && d.timeUsed is number && d.timeUsed >= 0 && d.timeUsed <= 3600
-    && d.sections is list && d.answers is list
-    && d.submittedAt == request.time;
+    && d.timeUsed is number && d.timeUsed >= 0 && d.timeUsed <= 10800
+    && d.sections is list && d.sections.size() <= 4
+    && d.submittedAt is timestamp && d.submittedAt <= request.time + duration.value(5, 'm')
+    && d.savedAt == request.time;
   }
-  function validLeaderboard(d, uid){
-   let attempt = getAfter(/databases/$(database)/documents/users/$(uid)/results/$(d.latestAttempt)).data;
-   return d.keys().hasOnly(['name','bestScore','streak','latestAttempt','updatedAt','scoreSource'])
+  function latestPath(uid, setId){
+   return /databases/$(database)/documents/users/$(uid)/latestResults/$(setId);
+  }
+  function latestMetrics(uid, setId, included){
+   let path = latestPath(uid, setId);
+   return included ? getAfter(path).data
+    : {'percentage':0,'timeUsed':0,'setIdx':existsAfter(path) ? -1 : 0};
+  }
+function validLeaderboard(d, uid, ids, offset){
+   let a = latestMetrics(uid, ids[0], (offset + 1) in d.completedSets);
+   let b = latestMetrics(uid, ids[1], (offset + 2) in d.completedSets);
+   let c = latestMetrics(uid, ids[2], (offset + 3) in d.completedSets);
+   let e = latestMetrics(uid, ids[3], (offset + 4) in d.completedSets);
+   let f = latestMetrics(uid, ids[4], (offset + 5) in d.completedSets);
+   let g = latestMetrics(uid, ids[5], (offset + 6) in d.completedSets);
+   let count = (a.setIdx > 0 ? 1 : 0) + (b.setIdx > 0 ? 1 : 0) + (c.setIdx > 0 ? 1 : 0)
+    + (e.setIdx > 0 ? 1 : 0) + (f.setIdx > 0 ? 1 : 0) + (g.setIdx > 0 ? 1 : 0);
+   let points = a.percentage + b.percentage + c.percentage + e.percentage + f.percentage + g.percentage;
+   return d.keys().hasOnly(['name','averagePercentage','setCount','completedSets','totalTimeUsed','streak','updatedAt','scoreSource'])
     && d.name is string && d.name.size() <= 80
-    && d.bestScore is int && d.bestScore >= 0 && d.bestScore <= 100
     && d.streak is number && d.streak >= 0
-    && d.latestAttempt is string && d.latestAttempt.size() <= 120
-    && d.scoreSource == 'browser' && d.updatedAt == request.time
-    && attempt.scoreSource == 'browser' && attempt.attemptId == d.latestAttempt;
+    && a.setIdx >= 0 && b.setIdx >= 0 && c.setIdx >= 0
+    && e.setIdx >= 0 && f.setIdx >= 0 && g.setIdx >= 0
+    && d.completedSets is list && d.completedSets.size() == count
+    && d.completedSets.hasOnly(offset == 0 ? [1,2,3,4,5,6] : [7,8,9,10,11,12])
+    && d.setCount == count && count > 0
+    && d.totalTimeUsed == a.timeUsed + b.timeUsed + c.timeUsed + e.timeUsed + f.timeUsed + g.timeUsed
+    && d.averagePercentage is number && d.averagePercentage >= 0 && d.averagePercentage <= 100
+    && d.averagePercentage * count >= points - 0.005001 * count
+    && d.averagePercentage * count <= points + 0.005001 * count
+    && d.scoreSource == 'browser' && d.updatedAt == request.time;
+  }
+  function leaderboardWritten(uid, setId){
+   return getAfter(leaderboardPath(uid, resultGroup(setId))).data.updatedAt == request.time;
+  }
+  function legacyCovered(uid, old){
+   let setId = ['set_1','set_2','set_3','set_4','set_5','set_6'][old.setIdx - 1];
+   return get(latestPath(uid, setId)).data.submittedAt >= old.submittedAt;
+  }
+  function validQuestionReport(d){
+   return d.keys().hasOnly(['uid','email','setIdx','section','questionId','questionNumber','question','reason','status','createdAt'])
+    && d.uid == request.auth.uid && d.email == request.auth.token.email
+    && d.setIdx is int && d.setIdx >= 1 && d.setIdx <= 12
+    && d.section in ['sv','ce','lc','rc']
+    && d.questionId is string && d.questionId.size() <= 160
+    && d.questionNumber is int && d.questionNumber >= 1
+    && d.question is string && d.question.size() <= 500
+    && d.reason is string && d.reason.size() >= 1 && d.reason.size() <= 1000
+    && d.status == 'open' && d.createdAt == request.time;
+  }
+function validDirectoryFields(d){
+   return d.get('directoryStudent', d.email != 'deepakrajpant978@gmail.com') == (d.email != 'deepakrajpant978@gmail.com')
+    && d.get('searchGrams', []) is list && d.get('searchGrams', []).size() <= 10000;
+  }
+  function reportAccess(idx){
+   return idx is int && idx >= 1 && idx <= 12
+    && canReadSet(['set_1','set_2','set_3','set_4','set_5','set_6','set_7','set_8','set_9','set_10','set_11','set_12'][idx-1]);
   }
   match /users/{uid} {
    allow read: if owner(uid) || admin();
    allow create: if owner(uid)
-    && request.resource.data.keys().hasOnly(['name','email','photoURL','emailVerified','role','status','practiceAccess','premium','bookmarks','streak','bestScore','createdAt','lastLogin'])
+    && request.resource.data.keys().hasOnly(['name','email','photoURL','emailVerified','role','status','practiceAccess','premium','bookmarks','streak','bestScore','createdAt','lastLogin','directoryStudent','searchGrams'])
+    && validDirectoryFields(request.resource.data)
     && request.resource.data.role == 'student' && request.resource.data.status == 'active'
     && request.resource.data.premium == null && request.resource.data.practiceAccess == false
     && request.resource.data.bestScore == 0
     && request.resource.data.bookmarks is list && request.resource.data.bookmarks.size() == 0
     && request.resource.data.streak == {'count':0,'last':null}
-    && request.resource.data.email == request.auth.token.email;
+    && request.resource.data.email == request.auth.token.email
+    && request.resource.data.createdAt == request.time;
    allow update: if admin()
     || (owner(uid)
       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','photoURL','lastLogin','bookmarks','streak'])
       && request.resource.data.bookmarks is list && request.resource.data.bookmarks.size() <= 1000)
-    || (owner(uid) && paid()
-      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bestScore'])
-      && request.resource.data.bestScore is int
-      && request.resource.data.bestScore >= 0 && request.resource.data.bestScore <= 100
-      && request.resource.data.bestScore == getAfter(/databases/$(database)/documents/leaderboard/$(uid)).data.bestScore);
+    || (owner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['directoryStudent','searchGrams'])
+      && !('directoryStudent' in resource.data) && validDirectoryFields(request.resource.data))
+    || (owner(uid) && resource.data.status == 'active'
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen'])
+      && request.resource.data.lastSeen == request.time);
    allow delete: if admin();
    match /results/{attemptId} {
     allow read: if owner(uid) || admin();
-    allow create: if (admin() || (owner(uid) && paid())) && validResult(request.resource.data, attemptId);
-    allow update, delete: if admin();
+    allow delete: if admin() || (owner(uid) && legacyCovered(uid, resource.data));
    }
+   match /latestResults/{setId} {
+    allow read: if owner(uid) || admin();
+    allow create: if (admin() || (owner(uid) && canReadSet(setId)))
+      && validLatestResult(request.resource.data, setId) && leaderboardWritten(uid, setId);
+    allow update: if (admin() || (owner(uid) && canReadSet(setId)))
+      && validLatestResult(request.resource.data, setId) && leaderboardWritten(uid, setId)
+      && request.resource.data.submittedAt >= resource.data.submittedAt
+      && request.resource.data.attemptId != resource.data.attemptId
+      && request.resource.data.attemptCount > resource.data.attemptCount;
+    allow delete: if admin();
+   }
+  }
+match /users/{uid}/resultReviews/{setId} {
+   allow get: if admin() || (owner(uid) && canReadSet(setId));
+   allow create, update: if (admin() || owner(uid))
+    && request.resource.data.keys().hasOnly(['attemptId','sections','savedAt'])
+    && request.resource.data.savedAt == request.time
+    && request.resource.data.sections is list && request.resource.data.sections.size() <= 4
+    && getAfter(latestPath(uid,setId)).data.savedAt == request.time
+    && getAfter(latestPath(uid,setId)).data.attemptId == request.resource.data.attemptId;
+   allow delete: if admin();
+  }
+  match /questionReports/{reportId} {
+   allow read: if admin();
+   allow create: if (admin() || reportAccess(request.resource.data.setIdx)) && validQuestionReport(request.resource.data);
+   allow update: if admin() && resource.data.status == 'open'
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','resolvedAt'])
+    && request.resource.data.status == 'resolved' && request.resource.data.resolvedAt == request.time;
+   allow delete: if admin();
   }
   match /accessRequests/{rid} {
    // An owner may get their not-yet-created deterministic request document.
@@ -94,9 +213,17 @@ service cloud.firestore {
   }
   match /plans/{id} { allow read: if true; allow write: if admin(); }
   match /appConfig/{id} { allow read: if true; allow write: if admin(); }
-  match /jftoctnovset/{id} {
-   allow read: if admin() || (signedIn() && paid());
+match /jftoctnovset/QORwII8D7qLZ7wuCDW36 {
+   allow get: if admin() || (signedIn() && legacyMode() && paid());
    allow write: if admin();
+  }
+  match /jftoctnovset/{id} {
+   allow get: if admin() || (signedIn() && octoberSet(id) && !legacyMode() && canReadBank(id));
+   allow list, write: if admin();
+  }
+  match /jftdecjanset/{id} {
+   allow get: if admin() || (signedIn() && decemberSet(id) && canReadBank(id));
+   allow list, write: if admin();
   }
   match /deviceBindings/{uid} {
    allow get: if owner(uid) || admin();
@@ -108,17 +235,16 @@ service cloud.firestore {
     && request.resource.data.boundAt == request.time);
    allow update, delete: if admin();
   }
-  match /leaderboard/{uid} {
-   // Scores are browser-reported practice scores, not server-verified results.
+match /leaderboard/{uid} {
    allow read: if signedIn();
-   allow create: if (admin() || (owner(uid) && paid()))
-    && validLeaderboard(request.resource.data, uid)
-    && request.resource.data.bestScore == getAfter(/databases/$(database)/documents/users/$(uid)/results/$(request.resource.data.latestAttempt)).data.percentage;
-   allow update: if (admin() || (owner(uid) && paid()))
-    && validLeaderboard(request.resource.data, uid)
-    && request.resource.data.bestScore >= resource.data.bestScore
-    && (request.resource.data.bestScore == resource.data.bestScore
-      || request.resource.data.bestScore == getAfter(/databases/$(database)/documents/users/$(uid)/results/$(request.resource.data.latestAttempt)).data.percentage);
+   allow create, update: if (admin() || (owner(uid) && activeAccount()))
+    && validLeaderboard(request.resource.data, uid, ['set_1','set_2','set_3','set_4','set_5','set_6'], 0);
+   allow delete: if admin();
+  }
+  match /leaderboardDecJan/{uid} {
+   allow read: if signedIn();
+   allow create, update: if (admin() || (owner(uid) && activeAccount()))
+    && validLeaderboard(request.resource.data, uid, ['set_7','set_8','set_9','set_10','set_11','set_12'], 6);
    allow delete: if admin();
   }
   match /adminAuditLogs/{id} {
